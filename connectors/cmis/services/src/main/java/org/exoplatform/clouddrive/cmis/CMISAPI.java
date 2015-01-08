@@ -1702,6 +1702,7 @@ public class CMISAPI {
           // default context
           OperationContext context = session.createOperationContext();
           context.setCacheEnabled(false);
+          context.setIncludeAcls(true);
           session.setDefaultContext(context);
 
           // object/document context
@@ -1725,7 +1726,7 @@ public class CMISAPI {
               filter.append(propDef.getQueryName());
             }
           }
-          Context folderContext = new Context(filter.toString(), false, // includeAcls
+          Context folderContext = new Context(filter.toString(), true, // includeAcls
                                               false, // includeAllowableActions
                                               false, // includePolicies
                                               IncludeRelationships.NONE,
@@ -1821,12 +1822,14 @@ public class CMISAPI {
 
     public AccessControlList getACL(CmisObject cmisObject) {
         List<AccessControlEntry> listEntry=new ArrayList<AccessControlEntry>();
-        for (  Ace entry : cmisObject.getAcl().getAces()) {
-            for (  String permission : entry.getPermissions()) {
-                listEntry.add(new AccessControlEntry(entry.getPrincipalId(), permission));
+        if (cmisObject.getAcl()!=null) {
+            for (Ace entry : cmisObject.getAcl().getAces()) {
+                for (String permission : entry.getPermissions()) {
+                    listEntry.add(new AccessControlEntry(entry.getPrincipalId(), permission));
+                }
             }
-        }
-        return new AccessControlList(null,listEntry);
+            return new AccessControlList(null, listEntry);
+        } else return null;
     }
 
 }

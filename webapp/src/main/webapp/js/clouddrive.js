@@ -996,7 +996,7 @@
 
 		// Menu items managed via view's showItemContextMenu() method (multi-selection)
 		// 21.05.2014 "uiIconEcmsOverloadThumbnail" removed from allowed
-		var ALLOWED_DMS_MENU_COMMON_ACTION_CLASSES = [ "uiIconEcmsUpload", "uiIconEcmsAddFolder", "uiIconEcmsAddToFavourite", 
+		var ALLOWED_DMS_MENU_COMMON_ACTION_CLASSES = [ "uiIconEcmsUpload", "uiIconEcmsAddFolder", "uiIconEcmsViewPermissions", "uiIconEcmsAddToFavourite", 
 				"uiIconEcmsRemoveFromFavourite", "uiIconEcmsManageActions", "uiIconEcmsManageRelations", "uiIconEcmsViewProperties", 
 				"uiIconEcmsManageAuditing" ];
 		var ALLOWED_DMS_MENU_FILE_ACTION_CLASSES = [ "uiIconEcmsOpenCloudFile", "uiIconEcmsPushCloudFile", 
