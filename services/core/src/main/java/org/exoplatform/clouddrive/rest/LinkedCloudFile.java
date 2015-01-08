@@ -17,10 +17,10 @@
 package org.exoplatform.clouddrive.rest;
 
 import org.exoplatform.clouddrive.CloudFile;
-
-import java.util.Calendar;
+import org.exoplatform.services.jcr.access.AccessControlList;
 
 import javax.jcr.Node;
+import java.util.Calendar;
 
 /**
  * Wraps fields from another {@link CloudFile} and replace its path with a path of that file {@link Node}
@@ -61,6 +61,10 @@ public class LinkedCloudFile implements CloudFile {
 
   private final boolean            isSymlink;
 
+  private final AccessControlList  acl;
+
+
+
   public LinkedCloudFile(CloudFile file, String path) {
     this.id = file.getId();
     this.title = file.getTitle();
@@ -77,6 +81,7 @@ public class LinkedCloudFile implements CloudFile {
     this.modifiedDate = file.getModifiedDate();
     this.path = path;
     this.isSymlink = true;
+    this.acl = file.getACL();
   }
 
   /**
@@ -184,5 +189,9 @@ public class LinkedCloudFile implements CloudFile {
    */
   public String getPath() {
     return path;
+  }
+
+  public AccessControlList getACL() {
+        return null;
   }
 }

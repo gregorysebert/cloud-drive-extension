@@ -17,10 +17,10 @@
 package org.exoplatform.clouddrive.jcr;
 
 import org.exoplatform.clouddrive.CloudFile;
-
-import java.util.Calendar;
+import org.exoplatform.services.jcr.access.AccessControlList;
 
 import javax.jcr.Node;
+import java.util.Calendar;
 
 /**
  * A POJO providing information about a cloud file stored in JCR.
@@ -57,6 +57,8 @@ public class JCRLocalCloudFile implements CloudFile {
 
   private final boolean            folder;
 
+  private final AccessControlList  acl;
+
   private final boolean            syncing;
 
   public JCRLocalCloudFile(String path,
@@ -75,7 +77,7 @@ public class JCRLocalCloudFile implements CloudFile {
                            boolean folder,
                            boolean syncing,
                            Node node,
-                           boolean changed) {
+                           boolean changed, AccessControlList acl) {
     this.path = path;
     this.id = id;
     this.title = title;
@@ -93,6 +95,7 @@ public class JCRLocalCloudFile implements CloudFile {
     this.syncing = syncing;
     this.node = node;
     this.changed = changed;
+    this.acl = acl;
   }
 
   public JCRLocalCloudFile(String path,
@@ -110,7 +113,7 @@ public class JCRLocalCloudFile implements CloudFile {
                            Calendar modifiedDate,
                            boolean folder,
                            Node node,
-                           boolean changed) {
+                           boolean changed, AccessControlList acl) {
     this(path,
          id,
          title,
@@ -127,7 +130,7 @@ public class JCRLocalCloudFile implements CloudFile {
          folder,
          false,
          node,
-         changed);
+         changed, acl);
   }
 
   public JCRLocalCloudFile(String path,
@@ -143,7 +146,7 @@ public class JCRLocalCloudFile implements CloudFile {
                            String author,
                            Calendar createdDate,
                            Calendar modifiedDate,
-                           boolean folder) {
+                           boolean folder, AccessControlList acl) {
     this(path,
          id,
          title,
@@ -160,7 +163,7 @@ public class JCRLocalCloudFile implements CloudFile {
          folder,
          false,
          null,
-         false);
+         false, acl);
   }
 
   public String getPath() {
@@ -262,6 +265,12 @@ public class JCRLocalCloudFile implements CloudFile {
   public boolean isFolder() {
     return folder;
   }
+
+  /* Manage Permission gsebert */
+  @Override
+    public AccessControlList getACL() {
+        return acl;
+   }
 
   /**
    * JCR Node that represent this Cloud File in the storage.

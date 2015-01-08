@@ -33,10 +33,10 @@
   <description>eXo Cloud Drive connectors</description>
 
   <modules>
-    <module>gdrive</module>
+    <!--<module>gdrive</module>
     <module>box</module>
-    <!-- module>dropbox</module -->
+    <module>dropbox</module>-->
     <module>cmis</module>
-    <module>sharepoint</module>
+    <!--<module>sharepoint</module>-->
   </modules>
 </project>

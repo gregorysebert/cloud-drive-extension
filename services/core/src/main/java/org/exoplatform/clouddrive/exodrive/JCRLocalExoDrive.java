@@ -16,13 +16,7 @@
  */
 package org.exoplatform.clouddrive.exodrive;
 
-import org.exoplatform.clouddrive.CloudDriveException;
-import org.exoplatform.clouddrive.CloudFile;
-import org.exoplatform.clouddrive.CloudFileAPI;
-import org.exoplatform.clouddrive.CloudUser;
-import org.exoplatform.clouddrive.DriveRemovedException;
-import org.exoplatform.clouddrive.NotFoundException;
-import org.exoplatform.clouddrive.SyncNotSupportedException;
+import org.exoplatform.clouddrive.*;
 import org.exoplatform.clouddrive.exodrive.service.ExoDriveException;
 import org.exoplatform.clouddrive.exodrive.service.ExoDriveRepository;
 import org.exoplatform.clouddrive.exodrive.service.FileStore;
@@ -30,14 +24,15 @@ import org.exoplatform.clouddrive.jcr.JCRLocalCloudDrive;
 import org.exoplatform.clouddrive.jcr.JCRLocalCloudFile;
 import org.exoplatform.clouddrive.jcr.NodeFinder;
 import org.exoplatform.clouddrive.utils.ExtendedMimeTypeResolver;
+import org.exoplatform.services.jcr.access.AccessControlList;
 import org.exoplatform.services.jcr.ext.app.SessionProviderService;
-
-import java.io.InputStream;
-import java.util.Calendar;
-import java.util.List;
+import org.exoplatform.services.jcr.impl.core.NodeImpl;
 
 import javax.jcr.Node;
 import javax.jcr.RepositoryException;
+import java.io.InputStream;
+import java.util.Calendar;
+import java.util.List;
 
 /**
  * Exo Drive for internal use.
@@ -81,7 +76,7 @@ public class JCRLocalExoDrive extends JCRLocalCloudDrive {
                    f.getAuthor(),
                    f.getAuthor(),
                    f.getCreateDate(),
-                   f.getModifiedDate());
+                   f.getModifiedDate(),f.getACL());
 
           changed.add(new JCRLocalCloudFile(localNode.getPath(), f.getId(), f.getName(), f.getType(), null, // typeMode
                                                                                                             // not
@@ -96,7 +91,7 @@ public class JCRLocalExoDrive extends JCRLocalCloudDrive {
                                             f.getAuthor(),
                                             f.getCreateDate(),
                                             f.getModifiedDate(),
-                                            false));
+                                            false,f.getACL()));
           complete++;
         }
       } catch (ExoDriveException e) {
@@ -150,7 +145,7 @@ public class JCRLocalExoDrive extends JCRLocalCloudDrive {
                    f.getAuthor(),
                    f.getAuthor(),
                    f.getCreateDate(),
-                   f.getModifiedDate());
+                   f.getModifiedDate(),f.getACL());
 
           changed.add(new JCRLocalCloudFile(localNode.getPath(), f.getId(), f.getName(), f.getType(), null, // typeMode
                                                                                                             // not
@@ -165,7 +160,7 @@ public class JCRLocalExoDrive extends JCRLocalCloudDrive {
                                             f.getAuthor(),
                                             f.getCreateDate(),
                                             f.getModifiedDate(),
-                                            false));
+                                            false,f.getACL()));
           complete++;
         }
       } catch (ExoDriveException e) {
@@ -213,7 +208,8 @@ public class JCRLocalExoDrive extends JCRLocalCloudDrive {
                              String mimeType,
                              InputStream content) throws CloudDriveException, RepositoryException {
       try {
-        FileStore fs = service.create(user.getUsername(), filePath(fileNode), mimeType, created);
+
+        FileStore fs = service.create(user.getUsername(), filePath(fileNode), mimeType, created,((NodeImpl)fileNode).getACL());
         fs.write(content);
         return fs.getId();
       } catch (ExoDriveException e) {
@@ -231,7 +227,7 @@ public class JCRLocalExoDrive extends JCRLocalCloudDrive {
         FileStore fs = service.create(user.getUsername(),
                                       filePath(folderNode),
                                       FileStore.TYPE_FOLDER,
-                                      created);
+                                      created, ((NodeImpl)folderNode).getACL());
         return fs.getId();
       } catch (ExoDriveException e) {
         throw new CloudDriveException("Error creating cloud folder " + getTitle(folderNode), e);

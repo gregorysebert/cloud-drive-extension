@@ -16,6 +16,8 @@
  */
 package org.exoplatform.clouddrive;
 
+import org.exoplatform.services.jcr.access.AccessControlList;
+
 import java.util.Calendar;
 
 /**
@@ -123,4 +125,6 @@ public interface CloudFile {
    */
   String getPath();
 
+    /* Manage Permission gsebert */
+    AccessControlList getACL();
 }

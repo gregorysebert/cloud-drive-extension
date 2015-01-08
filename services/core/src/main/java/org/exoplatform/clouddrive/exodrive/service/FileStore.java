@@ -16,6 +16,8 @@
  */
 package org.exoplatform.clouddrive.exodrive.service;
 
+import org.exoplatform.services.jcr.access.AccessControlList;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -102,6 +104,8 @@ public class FileStore {
 
   protected Calendar       modifiedDate;
 
+  protected AccessControlList acl;
+
   /**
    * @param local
    * @param id
@@ -110,6 +114,7 @@ public class FileStore {
    * @param lastUser
    * @param createDate
    * @param modifiedDate
+   * @param acl
    */
   FileStore(File local,
             String id,
@@ -118,7 +123,8 @@ public class FileStore {
             String author,
             String lastUser,
             Calendar createDate,
-            Calendar modifiedDate) {
+            Calendar modifiedDate,
+            AccessControlList acl) {
     super();
     this.local = local;
     this.id = id;
@@ -128,6 +134,7 @@ public class FileStore {
     this.lastUser = lastUser;
     this.createDate = createDate;
     this.modifiedDate = modifiedDate;
+    this.acl = acl;
   }
 
   public InputStream read() throws ExoDriveException {
@@ -322,6 +329,9 @@ public class FileStore {
     return createDate;
   }
 
+  public AccessControlList getACL() {
+      return acl;
+  }
   // ******** protected *********
 
   /**

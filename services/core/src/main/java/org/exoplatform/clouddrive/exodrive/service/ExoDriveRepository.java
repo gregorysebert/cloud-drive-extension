@@ -16,36 +16,16 @@
  */
 package org.exoplatform.clouddrive.exodrive.service;
 
-import static org.exoplatform.clouddrive.exodrive.service.FileStore.METADIR_NAME;
-import static org.exoplatform.clouddrive.exodrive.service.FileStore.METAFILE_DATEFORMAT;
-import static org.exoplatform.clouddrive.exodrive.service.FileStore.METAFILE_EXT;
-import static org.exoplatform.clouddrive.exodrive.service.FileStore.META_AUTHOR;
-import static org.exoplatform.clouddrive.exodrive.service.FileStore.META_CREATEDATE;
-import static org.exoplatform.clouddrive.exodrive.service.FileStore.META_ID;
-import static org.exoplatform.clouddrive.exodrive.service.FileStore.META_LASTUSER;
-import static org.exoplatform.clouddrive.exodrive.service.FileStore.META_MODIFIEDDATE;
-import static org.exoplatform.clouddrive.exodrive.service.FileStore.META_TYPE;
-import static org.exoplatform.clouddrive.exodrive.service.FileStore.FILE_SEPARATOR;
-import static org.exoplatform.clouddrive.exodrive.service.FileStore.TYPE_FOLDER;
-
 import org.exoplatform.commons.utils.MimeTypeResolver;
+import org.exoplatform.services.jcr.access.AccessControlList;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Properties;
-import java.util.UUID;
+import java.util.*;
+
+import static org.exoplatform.clouddrive.exodrive.service.FileStore.*;
 
 /**
  * Exo Drive repository abstraction.
@@ -126,6 +106,7 @@ public class ExoDriveRepository {
       try {
         Calendar createDate = METAFILE_DATEFORMAT.parseCalendar(metap.getProperty(META_CREATEDATE));
         Calendar modifiedDate = METAFILE_DATEFORMAT.parseCalendar(metap.getProperty(META_MODIFIEDDATE));
+        AccessControlList acl = null;
 
         if (id != null && type != null && author != null && lastUser != null && createDate != null
             && modifiedDate != null) {
@@ -136,7 +117,7 @@ public class ExoDriveRepository {
                                author,
                                author,
                                createDate,
-                               createDate);
+                               createDate,acl);
         }
       } catch (ParseException e) {
         throw new ExoDriveException("Cloud file storage " + file + " metadata inconsistent.", e);
@@ -244,7 +225,7 @@ public class ExoDriveRepository {
     return file.delete();
   }
 
-  public FileStore create(String ownerName, String path, String type, Calendar createDate) throws ExoDriveException {
+  public FileStore create(String ownerName, String path, String type, Calendar createDate, AccessControlList acl) throws ExoDriveException {
     File userDir = userRoot(ownerName);
     if (userDir.exists()) {
       File file = findFile(userDir, path);
@@ -281,6 +262,7 @@ public class ExoDriveRepository {
         metap.put(META_CREATEDATE, METAFILE_DATEFORMAT.format(createDate.getTime()));
         metap.put(META_MODIFIEDDATE, METAFILE_DATEFORMAT.format(createDate.getTime()));
 
+
         FileStore local = new FileStore(file,
                                         id,
                                         fileLink(ownerName, file.getName()),
@@ -288,7 +270,7 @@ public class ExoDriveRepository {
                                         ownerName,
                                         ownerName,
                                         createDate,
-                                        createDate);
+                                        createDate,acl);
 
         OutputStream out = new FileOutputStream(meta);
         try {

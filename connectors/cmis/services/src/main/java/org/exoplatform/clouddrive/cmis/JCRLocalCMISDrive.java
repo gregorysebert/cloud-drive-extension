@@ -18,26 +18,13 @@
  */
 package org.exoplatform.clouddrive.cmis;
 
-import org.apache.chemistry.opencmis.client.api.ChangeEvent;
-import org.apache.chemistry.opencmis.client.api.CmisObject;
-import org.apache.chemistry.opencmis.client.api.Document;
-import org.apache.chemistry.opencmis.client.api.FileableCmisObject;
-import org.apache.chemistry.opencmis.client.api.Folder;
+import org.apache.chemistry.opencmis.client.api.*;
+import org.apache.chemistry.opencmis.commons.data.Acl;
 import org.apache.chemistry.opencmis.commons.data.ContentStream;
 import org.apache.chemistry.opencmis.commons.data.RepositoryInfo;
 import org.apache.chemistry.opencmis.commons.enums.CapabilityChanges;
 import org.apache.chemistry.opencmis.commons.enums.ChangeType;
-import org.apache.chemistry.opencmis.commons.impl.MimeTypes;
-import org.exoplatform.clouddrive.CannotConnectDriveException;
-import org.exoplatform.clouddrive.CloudDriveAccessException;
-import org.exoplatform.clouddrive.CloudDriveException;
-import org.exoplatform.clouddrive.CloudFileAPI;
-import org.exoplatform.clouddrive.CloudUser;
-import org.exoplatform.clouddrive.ConflictException;
-import org.exoplatform.clouddrive.DriveRemovedException;
-import org.exoplatform.clouddrive.NotFoundException;
-import org.exoplatform.clouddrive.RefreshAccessException;
-import org.exoplatform.clouddrive.SyncNotSupportedException;
+import org.exoplatform.clouddrive.*;
 import org.exoplatform.clouddrive.cmis.CMISAPI.ChangeToken;
 import org.exoplatform.clouddrive.cmis.CMISAPI.ChangesIterator;
 import org.exoplatform.clouddrive.cmis.CMISAPI.ChildrenIterator;
@@ -48,38 +35,26 @@ import org.exoplatform.clouddrive.jcr.JCRLocalCloudFile;
 import org.exoplatform.clouddrive.jcr.NodeFinder;
 import org.exoplatform.clouddrive.utils.ExtendedMimeTypeResolver;
 import org.exoplatform.container.PortalContainer;
+import org.exoplatform.services.jcr.access.AccessControlList;
 import org.exoplatform.services.jcr.ext.app.SessionProviderService;
+import org.exoplatform.services.jcr.impl.core.NodeImpl;
 import org.gatein.common.util.Base64;
 
+import javax.jcr.Node;
+import javax.jcr.NodeIterator;
+import javax.jcr.PathNotFoundException;
+import javax.jcr.RepositoryException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
-
-import javax.activation.MimeType;
-import javax.jcr.Node;
-import javax.jcr.NodeIterator;
-import javax.jcr.PathNotFoundException;
-import javax.jcr.RepositoryException;
 
 /**
  * Local drive for CMIS provider.<br>
@@ -811,6 +786,7 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
       Document file;
       try {
         file = api.createDocument(parentId, title, mimeType, content);
+        api.addACL(file,((NodeImpl) fileNode).getACL());
       } catch (ConflictException e) {
         // XXX we assume name as factor of equality here and make local file to reflect the cloud side
         CmisObject existing = null;
@@ -837,19 +813,25 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
       String createdBy = file.getCreatedBy();
       String modifiedBy = file.getLastModifiedBy();
       String type = findMimetype(file, mimeType);
+      AccessControlList acl = getACL(file.getAcl());
 
       initFile(fileNode, id, name, type, link, null, // embedLink=null
                thumbnailLink, // downloadLink
                createdBy, // author
                modifiedBy, // lastUser
                created,
-               modified);
+               modified,acl);
       initCMISItem(fileNode, file);
 
       return id;
     }
 
-    /**
+      private AccessControlList getACL(Acl acl) {
+          //To do gsebert
+          return null;
+      }
+
+      /**
      * {@inheritDoc}
      */
     @Override
@@ -887,13 +869,14 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
       String createdBy = folder.getCreatedBy();
       String modifiedBy = folder.getLastModifiedBy();
       String type = folder.getType().getId();
+      AccessControlList acl = api.getACL(folder);
 
       initFolder(folderNode, id, name, type, //
                  link, // link
                  createdBy, // author
                  modifiedBy, // lastUser
                  created,
-                 created); // created as modified here
+                 created,acl); // created as modified here
       initCMISItem(folderNode, folder);
       return id;
     }
@@ -918,13 +901,14 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
           String type = file.getContentStreamMimeType();
           Calendar created = file.getCreationDate();
           modified = file.getLastModificationDate();
+          AccessControlList acl = null;
 
           initFile(fileNode, id, name, type, link, null, // embedLink=null
                    thumbnailLink, // downloadLink
                    createdBy, // author
                    modifiedBy, // lastUser
                    created,
-                   modified);
+                   modified,acl);
           initCMISItem(fileNode, file);
         } else {
           throw new CMISException("Object not a document: " + id + ", " + obj.getName());
@@ -952,13 +936,14 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
           String type = folder.getType().getId();
           Calendar created = folder.getCreationDate();
           modified = folder.getLastModificationDate();
+          AccessControlList acl = api.getACL(folder);
 
           initFolder(folderNode, id, name, type, //
                      link, // link
                      createdBy, // author
                      modifiedBy, // lastUser
                      created,
-                     modified);
+                     modified,acl);
           initCMISItem(folderNode, folder);
         } else {
           throw new CMISException("Object not a folder: " + id + ", " + obj.getName());
@@ -984,13 +969,14 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
       String type = file.getContentStreamMimeType();
       Calendar created = file.getCreationDate();
       modified = file.getLastModificationDate();
+      AccessControlList acl = null;
 
       initFile(fileNode, id, name, type, link, null, // embedLink=null
                thumbnailLink, // downloadLink
                createdBy, // author
                modifiedBy, // lastUser
                created,
-               modified);
+               modified,acl);
       initCMISItem(fileNode, file);
     }
 
@@ -1011,13 +997,14 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
       String type = file.getContentStreamMimeType();
       Calendar created = file.getCreationDate();
       Calendar modified = file.getLastModificationDate();
+      AccessControlList acl = null;
 
       initFile(destFileNode, id, name, type, link, null, // embedLink=null
                thumbnailLink, // thumbnailLink
                createdBy, // author
                modifiedBy, // lastUser
                created,
-               modified);
+               modified,acl);
       initCMISItem(destFileNode, file);
       return id;
     }
@@ -1040,13 +1027,14 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
       String type = folder.getType().getId();
       Calendar created = folder.getCreationDate();
       Calendar modified = folder.getLastModificationDate();
+      AccessControlList acl = api.getACL(folder);
 
       initFolder(destFolderNode, id, name, type, //
                  link, // link
                  createdBy, // author
                  modifiedBy, // lastUser
                  created,
-                 modified);
+                 modified, acl);
       initCMISItem(destFolderNode, folder);
       return id;
     }
@@ -1475,7 +1463,7 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
                           String author,
                           String lastUser,
                           Calendar created,
-                          Calendar modified) throws RepositoryException {
+                          Calendar modified, AccessControlList acl) throws RepositoryException {
 
     // clarify type: try guess more relevant MIME type from file name/extension.
     String recommendedType = findMimetype(title, type);
@@ -1493,7 +1481,7 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
                    author,
                    lastUser,
                    created,
-                   modified);
+                   modified,acl);
   }
 
   /**
@@ -1577,6 +1565,7 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
     Calendar modified = item.getLastModificationDate();
     String createdBy = item.getCreatedBy();
     String modifiedBy = item.getLastModifiedBy();
+    AccessControlList acl = api.getACL(item);
 
     boolean changed = node.isNew();
     if (!changed) {
@@ -1595,7 +1584,7 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
       link = api.getLink((Folder) item);
       thumbnailLink = null;
       if (changed) {
-        initFolder(node, id, name, type, link, createdBy, modifiedBy, created, modified);
+        initFolder(node, id, name, type, link, createdBy, modifiedBy, created, modified, acl);
         initCMISItem(node, item);
       }
     } else {
@@ -1610,7 +1599,7 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
                  createdBy,
                  modifiedBy,
                  created,
-                 modified);
+                 modified,acl);
         initCMISItem(node, item);
 
         if (contentLength >= 0) {
@@ -1636,7 +1625,7 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
                                  modified,
                                  isFolder,
                                  node,
-                                 changed);
+                                 changed, acl);
   }
 
   /**

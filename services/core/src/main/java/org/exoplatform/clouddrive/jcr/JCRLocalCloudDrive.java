@@ -17,38 +17,7 @@
 package org.exoplatform.clouddrive.jcr;
 
 import com.ibm.icu.text.Transliterator;
-
-import org.exoplatform.clouddrive.BaseCloudDriveListener;
-import org.exoplatform.clouddrive.CannotConnectDriveException;
-import org.exoplatform.clouddrive.CloudDrive;
-import org.exoplatform.clouddrive.CloudDriveAccessException;
-import org.exoplatform.clouddrive.CloudDriveConnector;
-import org.exoplatform.clouddrive.CloudDriveEnvironment;
-import org.exoplatform.clouddrive.CloudDriveEvent;
-import org.exoplatform.clouddrive.CloudDriveException;
-import org.exoplatform.clouddrive.CloudDriveManager;
-import org.exoplatform.clouddrive.CloudDriveMessage;
-import org.exoplatform.clouddrive.CloudDriveStorage;
-import org.exoplatform.clouddrive.CloudFile;
-import org.exoplatform.clouddrive.CloudFileAPI;
-import org.exoplatform.clouddrive.CloudFileSynchronizer;
-import org.exoplatform.clouddrive.CloudProviderException;
-import org.exoplatform.clouddrive.CloudUser;
-import org.exoplatform.clouddrive.ConflictException;
-import org.exoplatform.clouddrive.ConstraintException;
-import org.exoplatform.clouddrive.DriveRemovedException;
-import org.exoplatform.clouddrive.DriveTrashedException;
-import org.exoplatform.clouddrive.FileTrashRemovedException;
-import org.exoplatform.clouddrive.NotCloudDriveException;
-import org.exoplatform.clouddrive.NotCloudFileException;
-import org.exoplatform.clouddrive.NotConnectedException;
-import org.exoplatform.clouddrive.NotFoundException;
-import org.exoplatform.clouddrive.NotYetCloudFileException;
-import org.exoplatform.clouddrive.RefreshAccessException;
-import org.exoplatform.clouddrive.SkipChangeException;
-import org.exoplatform.clouddrive.SkipSyncException;
-import org.exoplatform.clouddrive.SyncNotSupportedException;
-import org.exoplatform.clouddrive.ThreadExecutor;
+import org.exoplatform.clouddrive.*;
 import org.exoplatform.clouddrive.jcr.JCRLocalCloudDrive.JCRListener.AddTrashListener;
 import org.exoplatform.clouddrive.jcr.JCRLocalCloudDrive.JCRListener.DriveChangesListener;
 import org.exoplatform.clouddrive.utils.ChunkIterator;
@@ -56,52 +25,15 @@ import org.exoplatform.clouddrive.utils.ExtendedMimeTypeResolver;
 import org.exoplatform.clouddrive.utils.IdentityHelper;
 import org.exoplatform.container.ExoContainer;
 import org.exoplatform.container.ExoContainerContext;
+import org.exoplatform.services.jcr.access.AccessControlEntry;
+import org.exoplatform.services.jcr.access.AccessControlList;
 import org.exoplatform.services.jcr.core.ManageableRepository;
 import org.exoplatform.services.jcr.ext.app.SessionProviderService;
 import org.exoplatform.services.jcr.ext.common.SessionProvider;
+import org.exoplatform.services.jcr.impl.core.NodeImpl;
 import org.exoplatform.services.security.ConversationState;
 
-import java.lang.ref.SoftReference;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
-import javax.jcr.AccessDeniedException;
-import javax.jcr.InvalidItemStateException;
-import javax.jcr.Item;
-import javax.jcr.ItemNotFoundException;
-import javax.jcr.LoginException;
-import javax.jcr.NoSuchWorkspaceException;
-import javax.jcr.Node;
-import javax.jcr.NodeIterator;
-import javax.jcr.PathNotFoundException;
-import javax.jcr.Property;
-import javax.jcr.PropertyIterator;
-import javax.jcr.RepositoryException;
-import javax.jcr.Session;
+import javax.jcr.*;
 import javax.jcr.nodetype.NodeDefinition;
 import javax.jcr.nodetype.NodeType;
 import javax.jcr.nodetype.PropertyDefinition;
@@ -112,6 +44,14 @@ import javax.jcr.observation.ObservationManager;
 import javax.jcr.query.Query;
 import javax.jcr.query.QueryManager;
 import javax.jcr.query.QueryResult;
+import java.lang.ref.SoftReference;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * JCR storage for local cloud drive. Created by The eXo Platform SAS
@@ -4162,6 +4102,7 @@ public abstract class JCRLocalCloudDrive extends CloudDrive implements CloudDriv
     String typeMode = isFolder ? null : mimeTypes.getMimeTypeMode(type, title);
     String link = link(fileNode);
     String editLink = editLink(fileNode);
+    AccessControlList acl = null;
 
     return new JCRLocalCloudFile(fileNode.getPath(),
                                  fileAPI.getId(fileNode),
@@ -4176,7 +4117,7 @@ public abstract class JCRLocalCloudDrive extends CloudDrive implements CloudDriv
                                  fileNode.getProperty("ecd:author").getString(),
                                  fileNode.getProperty("ecd:created").getDate(),
                                  fileNode.getProperty("ecd:modified").getDate(),
-                                 isFolder);
+                                 isFolder,acl);
   }
 
   /**
@@ -4205,13 +4146,13 @@ public abstract class JCRLocalCloudDrive extends CloudDrive implements CloudDriv
                           String author,
                           String lastUser,
                           Calendar created,
-                          Calendar modified) throws RepositoryException {
+                          Calendar modified, AccessControlList acl) throws RepositoryException {
     // ecd:cloudFile
     if (!localNode.isNodeType(ECD_CLOUDFILE)) {
       localNode.addMixin(ECD_CLOUDFILE);
     }
 
-    initCommon(localNode, title, id, type, link, author, lastUser, created, modified);
+    initCommon(localNode, title, id, type, link, author, lastUser, created, modified, acl);
 
     // ecd:cloudFileResource
     Node content = localNode.getNode("jcr:content");
@@ -4246,13 +4187,13 @@ public abstract class JCRLocalCloudDrive extends CloudDrive implements CloudDriv
                             String author,
                             String lastUser,
                             Calendar created,
-                            Calendar modified) throws RepositoryException {
+                            Calendar modified,AccessControlList acl) throws RepositoryException {
     // exo:cloudFolder
     if (!localNode.isNodeType(ECD_CLOUDFOLDER)) {
       localNode.addMixin(ECD_CLOUDFOLDER);
     }
 
-    initCommon(localNode, id, title, type, link, author, lastUser, created, modified);
+    initCommon(localNode, id, title, type, link, author, lastUser, created, modified, acl);
   }
 
   /**
@@ -4271,29 +4212,41 @@ public abstract class JCRLocalCloudDrive extends CloudDrive implements CloudDriv
                             String author,
                             String lastUser,
                             Calendar created,
-                            Calendar modified) throws RepositoryException {
-    localNode.setProperty("exo:title", title);
-    localNode.setProperty("ecd:id", id);
-    localNode.setProperty("ecd:driveUUID", rootUUID);
-    localNode.setProperty("ecd:type", type);
-    localNode.setProperty("ecd:url", link);
-    localNode.setProperty("ecd:author", author);
-    localNode.setProperty("ecd:lastUser", lastUser);
-    localNode.setProperty("ecd:created", created);
-    localNode.setProperty("ecd:modified", modified);
-    localNode.setProperty("ecd:synchronized", Calendar.getInstance());
+                            Calendar modified, AccessControlList acl) throws RepositoryException {
+      localNode.setProperty("exo:title", title);
+      localNode.setProperty("ecd:id", id);
+      localNode.setProperty("ecd:driveUUID", rootUUID);
+      localNode.setProperty("ecd:type", type);
+      localNode.setProperty("ecd:url", link);
+      localNode.setProperty("ecd:author", author);
+      localNode.setProperty("ecd:lastUser", lastUser);
+      localNode.setProperty("ecd:created", created);
+      localNode.setProperty("ecd:modified", modified);
+      localNode.setProperty("ecd:synchronized", Calendar.getInstance());
 
-    if (localNode.isNodeType(EXO_DATETIME)) {
-      localNode.setProperty("exo:dateCreated", created);
-      localNode.setProperty("exo:dateModified", modified);
-    }
+      if (localNode.isNodeType(EXO_DATETIME)) {
+          localNode.setProperty("exo:dateCreated", created);
+          localNode.setProperty("exo:dateModified", modified);
+      }
 
-    if (localNode.isNodeType(EXO_MODIFY)) {
-      localNode.setProperty("exo:lastModifiedDate", modified);
-      localNode.setProperty("exo:lastModifier", lastUser);
-    }
+      if (localNode.isNodeType(EXO_MODIFY)) {
+          localNode.setProperty("exo:lastModifiedDate", modified);
+          localNode.setProperty("exo:lastModifier", lastUser);
+      }
+      if (acl != null) {
+          Map<String, String[]> perMap = new HashMap<String, String[]>();
+          List<String> permsList;
+          List<String> idList = new ArrayList<String>();
+          for (AccessControlEntry accessEntry : acl.getPermissionEntries()) {
+              if (!idList.contains(accessEntry.getIdentity())) {
+                  idList.add(accessEntry.getIdentity());
+                  permsList = acl.getPermissions(accessEntry.getIdentity());
+                  perMap.put(accessEntry.getIdentity(), permsList.toArray(new String[permsList.size()]));
+              }
+          }
+          ((NodeImpl) localNode).setPermissions(perMap);
+      }
   }
-
   /**
    * Internal access to Cloud Drive title without throwing an Exception.
    * 

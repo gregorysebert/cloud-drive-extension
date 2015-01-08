@@ -18,78 +18,33 @@
  */
 package org.exoplatform.clouddrive.cmis;
 
-import org.apache.chemistry.opencmis.client.api.ChangeEvent;
-import org.apache.chemistry.opencmis.client.api.ChangeEvents;
-import org.apache.chemistry.opencmis.client.api.CmisObject;
-import org.apache.chemistry.opencmis.client.api.Document;
-import org.apache.chemistry.opencmis.client.api.DocumentType;
-import org.apache.chemistry.opencmis.client.api.FileableCmisObject;
-import org.apache.chemistry.opencmis.client.api.Folder;
-import org.apache.chemistry.opencmis.client.api.ItemIterable;
-import org.apache.chemistry.opencmis.client.api.ObjectId;
-import org.apache.chemistry.opencmis.client.api.ObjectType;
-import org.apache.chemistry.opencmis.client.api.OperationContext;
-import org.apache.chemistry.opencmis.client.api.Property;
-import org.apache.chemistry.opencmis.client.api.Repository;
-import org.apache.chemistry.opencmis.client.api.Session;
-import org.apache.chemistry.opencmis.client.api.SessionFactory;
+import org.apache.chemistry.opencmis.client.api.*;
 import org.apache.chemistry.opencmis.client.bindings.CmisBindingFactory;
 import org.apache.chemistry.opencmis.client.bindings.spi.LinkAccess;
 import org.apache.chemistry.opencmis.client.runtime.OperationContextImpl;
 import org.apache.chemistry.opencmis.client.runtime.SessionFactoryImpl;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.SessionParameter;
+import org.apache.chemistry.opencmis.commons.data.Ace;
 import org.apache.chemistry.opencmis.commons.data.ContentStream;
 import org.apache.chemistry.opencmis.commons.data.RepositoryInfo;
 import org.apache.chemistry.opencmis.commons.definitions.PropertyDefinition;
-import org.apache.chemistry.opencmis.commons.enums.BaseTypeId;
-import org.apache.chemistry.opencmis.commons.enums.BindingType;
-import org.apache.chemistry.opencmis.commons.enums.ChangeType;
-import org.apache.chemistry.opencmis.commons.enums.IncludeRelationships;
-import org.apache.chemistry.opencmis.commons.enums.UnfileObject;
-import org.apache.chemistry.opencmis.commons.enums.VersioningState;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisBaseException;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisConnectionException;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisConstraintException;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisContentAlreadyExistsException;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisInvalidArgumentException;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisNameConstraintViolationException;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisNotSupportedException;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisObjectNotFoundException;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisPermissionDeniedException;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisRuntimeException;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisStreamNotSupportedException;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisUnauthorizedException;
-import org.apache.chemistry.opencmis.commons.exceptions.CmisUpdateConflictException;
+import org.apache.chemistry.opencmis.commons.enums.*;
+import org.apache.chemistry.opencmis.commons.exceptions.*;
 import org.apache.chemistry.opencmis.commons.impl.Constants;
 import org.apache.chemistry.opencmis.commons.spi.CmisBinding;
-import org.exoplatform.clouddrive.CloudDriveAccessException;
-import org.exoplatform.clouddrive.CloudDriveException;
-import org.exoplatform.clouddrive.ConflictException;
-import org.exoplatform.clouddrive.ConstraintException;
-import org.exoplatform.clouddrive.NotFoundException;
-import org.exoplatform.clouddrive.RefreshAccessException;
+import org.exoplatform.clouddrive.*;
 import org.exoplatform.clouddrive.cmis.JCRLocalCMISDrive.LocalFile;
 import org.exoplatform.clouddrive.utils.ChunkIterator;
+import org.exoplatform.services.jcr.access.AccessControlEntry;
+import org.exoplatform.services.jcr.access.AccessControlList;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 
 import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -118,7 +73,7 @@ public class CMISAPI {
 
   public static final String EMPTY_TOKEN           = "".intern();
 
-  /**
+    /**
    * Iterator over whole set of items from cloud service. This iterator hides next-chunk logic on
    * request to the service. <br>
    * Iterator methods can throw {@link CloudDriveException} in case of remote or communication errors.
@@ -1850,5 +1805,28 @@ public class CMISAPI {
     DateFormat format = new SimpleDateFormat(TOKEN_DATATIME_FORMAT);
     return format.format(date);
   }
+
+    //Add ACL gsebert
+
+  public void addACL(CmisObject cmisObject, AccessControlList acl) throws RefreshAccessException, CMISException {
+      Session session = session();
+      List<String> permissions = new ArrayList<String>();
+      permissions.add("cmis:write");
+      String principal = "root";
+      Ace aceIn = session.getObjectFactory().createAce(principal, permissions);
+      List<Ace> aceListIn = new ArrayList<Ace>();
+      aceListIn.add(aceIn);
+      cmisObject.addAcl(aceListIn, AclPropagation.REPOSITORYDETERMINED);
+  }
+
+    public AccessControlList getACL(CmisObject cmisObject) {
+        List<AccessControlEntry> listEntry=new ArrayList<AccessControlEntry>();
+        for (  Ace entry : cmisObject.getAcl().getAces()) {
+            for (  String permission : entry.getPermissions()) {
+                listEntry.add(new AccessControlEntry(entry.getPrincipalId(), permission));
+            }
+        }
+        return new AccessControlList(null,listEntry);
+    }
 
 }

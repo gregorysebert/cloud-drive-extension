@@ -17,6 +17,7 @@
 package org.exoplatform.clouddrive.rest;
 
 import org.exoplatform.clouddrive.CloudFile;
+import org.exoplatform.services.jcr.access.AccessControlList;
 
 import java.util.Calendar;
 
@@ -141,7 +142,11 @@ public class AcceptedCloudFile implements CloudFile {
     return path;
   }
 
-  /**
+  public AccessControlList getACL() {
+        return null;
+    }
+
+    /**
    * Return <code>true</code> always.
    */
   public boolean isCreating() {
