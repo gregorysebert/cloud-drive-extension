@@ -4249,6 +4249,26 @@ public abstract class JCRLocalCloudDrive extends CloudDrive implements CloudDriv
               }
               ((NodeImpl) localNode).setPermissions(perMap);
       }
+      //Set default permissions from parent Node
+      else
+      {
+          if (localNode.canAddMixin("exo:privilegeable")) {
+              localNode.addMixin("exo:privilegeable");
+              Map<String, String[]> perMap = new HashMap<String, String[]>();
+              List<String> permsList;
+              List<String> idList = new ArrayList<String>();
+              for (AccessControlEntry accessEntry : ((NodeImpl) localNode.getParent()).getACL().getPermissionEntries()) {
+                  if (!idList.contains(accessEntry.getIdentity())) {
+                      idList.add(accessEntry.getIdentity());
+                      permsList = ((NodeImpl) localNode.getParent()).getACL().getPermissions(accessEntry.getIdentity());
+                      perMap.put(accessEntry.getIdentity(), permsList.toArray(new String[permsList.size()]));
+                  }
+              }
+              ((NodeImpl) localNode).setPermissions(perMap);
+          }
+
+      }
+
   }
   /**
    * Internal access to Cloud Drive title without throwing an Exception.
