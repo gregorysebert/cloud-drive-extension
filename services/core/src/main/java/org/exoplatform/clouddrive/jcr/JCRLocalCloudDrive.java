@@ -4234,17 +4234,20 @@ public abstract class JCRLocalCloudDrive extends CloudDrive implements CloudDriv
           localNode.setProperty("exo:lastModifier", lastUser);
       }
       if (acl != null) {
-          Map<String, String[]> perMap = new HashMap<String, String[]>();
-          List<String> permsList;
-          List<String> idList = new ArrayList<String>();
-          for (AccessControlEntry accessEntry : acl.getPermissionEntries()) {
-              if (!idList.contains(accessEntry.getIdentity())) {
-                  idList.add(accessEntry.getIdentity());
-                  permsList = acl.getPermissions(accessEntry.getIdentity());
-                  perMap.put(accessEntry.getIdentity(), permsList.toArray(new String[permsList.size()]));
-              }
+          if (localNode.canAddMixin("exo:privilegeable")) {
+              localNode.addMixin("exo:privilegeable");
           }
-          ((NodeImpl) localNode).setPermissions(perMap);
+              Map<String, String[]> perMap = new HashMap<String, String[]>();
+              List<String> permsList;
+              List<String> idList = new ArrayList<String>();
+              for (AccessControlEntry accessEntry : acl.getPermissionEntries()) {
+                  if (!idList.contains(accessEntry.getIdentity())) {
+                      idList.add(accessEntry.getIdentity());
+                      permsList = acl.getPermissions(accessEntry.getIdentity());
+                      perMap.put(accessEntry.getIdentity(), permsList.toArray(new String[permsList.size()]));
+                  }
+              }
+              ((NodeImpl) localNode).setPermissions(perMap);
       }
   }
   /**
