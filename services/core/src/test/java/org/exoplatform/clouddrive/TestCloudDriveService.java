@@ -17,7 +17,6 @@
 package org.exoplatform.clouddrive;
 
 import junit.framework.TestCase;
-
 import org.exoplatform.clouddrive.CloudDrive.Command;
 import org.exoplatform.clouddrive.exodrive.ExoDriveUser;
 import org.exoplatform.clouddrive.exodrive.service.ExoDriveException;
@@ -30,12 +29,9 @@ import org.exoplatform.services.jcr.ext.app.SessionProviderService;
 import org.exoplatform.services.jcr.ext.common.SessionProvider;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
-import org.exoplatform.services.security.Authenticator;
-import org.exoplatform.services.security.ConversationState;
-import org.exoplatform.services.security.Credential;
-import org.exoplatform.services.security.PasswordCredential;
-import org.exoplatform.services.security.UsernameCredential;
+import org.exoplatform.services.security.*;
 
+import javax.jcr.*;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.lang.reflect.UndeclaredThrowableException;
@@ -44,12 +40,6 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-
-import javax.jcr.Node;
-import javax.jcr.NodeIterator;
-import javax.jcr.Repository;
-import javax.jcr.RepositoryException;
-import javax.jcr.Session;
 
 /**
  * Created by The eXo Platform SAS.
@@ -147,7 +137,7 @@ public class TestCloudDriveService extends TestCase {
     exoDrives.createUser(cloudUser.getUsername());
     for (int i = 1; i <= filesCount; i++) {
       String fname = FILE_NAME_PATTERN + i + ".txt";
-      FileStore fs = exoDrives.create(cloudUser.getUsername(), fname, "text/plain", Calendar.getInstance());
+      FileStore fs = exoDrives.create(cloudUser.getUsername(), fname, "text/plain", Calendar.getInstance(),null);
       InputStream stream = new ByteArrayInputStream((fileContentPattern + i).getBytes());
       fs.write(stream);
       stream.close();
