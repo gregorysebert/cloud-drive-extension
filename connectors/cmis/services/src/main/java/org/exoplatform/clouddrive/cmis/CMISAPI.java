@@ -23,6 +23,7 @@ import org.apache.chemistry.opencmis.client.bindings.CmisBindingFactory;
 import org.apache.chemistry.opencmis.client.bindings.spi.LinkAccess;
 import org.apache.chemistry.opencmis.client.runtime.OperationContextImpl;
 import org.apache.chemistry.opencmis.client.runtime.SessionFactoryImpl;
+import org.apache.chemistry.opencmis.commons.BasicPermissions;
 import org.apache.chemistry.opencmis.commons.PropertyIds;
 import org.apache.chemistry.opencmis.commons.SessionParameter;
 import org.apache.chemistry.opencmis.commons.data.Ace;
@@ -38,6 +39,7 @@ import org.exoplatform.clouddrive.cmis.JCRLocalCMISDrive.LocalFile;
 import org.exoplatform.clouddrive.utils.ChunkIterator;
 import org.exoplatform.services.jcr.access.AccessControlEntry;
 import org.exoplatform.services.jcr.access.AccessControlList;
+import org.exoplatform.services.jcr.access.PermissionType;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 
@@ -1811,14 +1813,38 @@ public class CMISAPI {
 
   public void addACL(CmisObject cmisObject, AccessControlList acl) throws RefreshAccessException, CMISException {
       Session session = session();
-      List<String> permissions = new ArrayList<String>();
-      permissions.add("cmis:write");
-      String principal = "root";
-      Ace aceIn = session.getObjectFactory().createAce(principal, permissions);
+      List<String> idList = new ArrayList<String>();
       List<Ace> aceListIn = new ArrayList<Ace>();
-      aceListIn.add(aceIn);
-      cmisObject.addAcl(aceListIn, AclPropagation.REPOSITORYDETERMINED);
+      for (AccessControlEntry entry : acl.getPermissionEntries()) {
+          if (!idList.contains(entry.getIdentity())) {
+              idList.add(entry.getIdentity());
+              List<String> jcrPerms = acl.getPermissions(entry.getIdentity());
+              Ace aceIn = session.getObjectFactory().createAce(entry.getIdentity(), convertToCmisPerm(jcrPerms));
+              aceListIn.add(aceIn);
+          }
+
+          cmisObject.addAcl(aceListIn, AclPropagation.REPOSITORYDETERMINED);
+      }
   }
+    //MAP JCR Permissions to the 3 cmis supported permission types: cmis:read cmis:write cmis:all
+    private List<String> convertToCmisPerm(List<String> jcrPerms) {
+             List<String> cmisPerms = new ArrayList<String>();
+            for (String perm : jcrPerms) {
+                 if (perm.equals(PermissionType.READ))
+                 {
+                    cmisPerms.add(BasicPermissions.READ);
+                 }
+                if (perm.equals(PermissionType.ALL)) {
+                    cmisPerms.add(BasicPermissions.ALL);
+                }
+                // else map to cmis write permission
+                if ((!perm.equals(PermissionType.READ)||!perm.equals(PermissionType.ALL)) && !cmisPerms.contains(BasicPermissions.WRITE))
+                {
+                    cmisPerms.add(BasicPermissions.WRITE);
+                }
+             }
+             return cmisPerms;
+    }
 
     public AccessControlList getACL(CmisObject cmisObject) {
         List<AccessControlEntry> listEntry=new ArrayList<AccessControlEntry>();
