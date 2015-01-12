@@ -19,7 +19,6 @@
 package org.exoplatform.clouddrive.cmis;
 
 import org.apache.chemistry.opencmis.client.api.*;
-import org.apache.chemistry.opencmis.commons.data.Acl;
 import org.apache.chemistry.opencmis.commons.data.ContentStream;
 import org.apache.chemistry.opencmis.commons.data.RepositoryInfo;
 import org.apache.chemistry.opencmis.commons.enums.CapabilityChanges;
@@ -813,7 +812,7 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
       String createdBy = file.getCreatedBy();
       String modifiedBy = file.getLastModifiedBy();
       String type = findMimetype(file, mimeType);
-      AccessControlList acl = getACL(file.getAcl());
+      AccessControlList acl = api.getACL(file);
 
       initFile(fileNode, id, name, type, link, null, // embedLink=null
                thumbnailLink, // downloadLink
@@ -825,11 +824,6 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
 
       return id;
     }
-
-      private AccessControlList getACL(Acl acl) {
-          //To do gsebert
-          return null;
-      }
 
       /**
      * {@inheritDoc}
@@ -845,6 +839,7 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
       Folder folder;
       try {
         folder = api.createFolder(getParentId(folderNode), getTitle(folderNode));
+        api.addACL(folder,((NodeImpl) folderNode).getACL());
       } catch (ConflictException e) {
         // XXX we assume name as factor of equality here
         CmisObject existing = null;
@@ -901,7 +896,7 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
           String type = file.getContentStreamMimeType();
           Calendar created = file.getCreationDate();
           modified = file.getLastModificationDate();
-          AccessControlList acl = null;
+          AccessControlList acl = api.getACL(file);
 
           initFile(fileNode, id, name, type, link, null, // embedLink=null
                    thumbnailLink, // downloadLink
@@ -969,7 +964,7 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
       String type = file.getContentStreamMimeType();
       Calendar created = file.getCreationDate();
       modified = file.getLastModificationDate();
-      AccessControlList acl = null;
+      AccessControlList acl = api.getACL(file);
 
       initFile(fileNode, id, name, type, link, null, // embedLink=null
                thumbnailLink, // downloadLink
@@ -997,7 +992,7 @@ public class JCRLocalCMISDrive extends JCRLocalCloudDrive {
       String type = file.getContentStreamMimeType();
       Calendar created = file.getCreationDate();
       Calendar modified = file.getLastModificationDate();
-      AccessControlList acl = null;
+      AccessControlList acl = api.getACL(file);
 
       initFile(destFileNode, id, name, type, link, null, // embedLink=null
                thumbnailLink, // thumbnailLink

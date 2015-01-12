@@ -4233,6 +4233,7 @@ public abstract class JCRLocalCloudDrive extends CloudDrive implements CloudDriv
           localNode.setProperty("exo:lastModifiedDate", modified);
           localNode.setProperty("exo:lastModifier", lastUser);
       }
+
       if (acl != null) {
           if (localNode.canAddMixin("exo:privilegeable")) {
               localNode.addMixin("exo:privilegeable");

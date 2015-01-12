@@ -25,14 +25,13 @@ import org.exoplatform.clouddrive.SkipSyncException;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Calendar;
-
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
 import javax.jcr.PathNotFoundException;
 import javax.jcr.RepositoryException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Calendar;
 
 /**
  * Synchronizer handling nt:file and nt:folder nodetypes.<br>

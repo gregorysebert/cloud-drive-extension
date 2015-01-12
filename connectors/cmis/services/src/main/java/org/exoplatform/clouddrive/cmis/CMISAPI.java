@@ -1846,11 +1846,35 @@ public class CMISAPI {
              return cmisPerms;
     }
 
+    //MAP CMIS Permissions (cmis:read cmis:write cmis:all) to JCR permissions
+    private List<String> convertToJCRPerm(List<String> cmisPerms) {
+        List<String> jcrPerms = new ArrayList<String>();
+        for (String perm : cmisPerms) {
+            if (perm.equals(BasicPermissions.ALL)) {
+                return Arrays.asList(PermissionType.ALL);
+            }
+            if (perm.equals(BasicPermissions.READ))
+            {
+                jcrPerms.add(PermissionType.READ);
+            }
+            // else map to cmis write permission
+            if (perm.equals(BasicPermissions.WRITE))
+            {
+                jcrPerms.add(PermissionType.ADD_NODE);
+                jcrPerms.add(PermissionType.CHANGE_PERMISSION);
+                jcrPerms.add(PermissionType.SET_PROPERTY);
+            }
+        }
+        return jcrPerms;
+    }
+
+
+
     public AccessControlList getACL(CmisObject cmisObject) {
         List<AccessControlEntry> listEntry=new ArrayList<AccessControlEntry>();
         if (cmisObject.getAcl()!=null) {
             for (Ace entry : cmisObject.getAcl().getAces()) {
-                for (String permission : entry.getPermissions()) {
+                for (String permission : convertToJCRPerm(entry.getPermissions())) {
                     listEntry.add(new AccessControlEntry(entry.getPrincipalId(), permission));
                 }
             }

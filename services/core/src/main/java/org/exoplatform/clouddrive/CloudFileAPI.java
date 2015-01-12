@@ -18,12 +18,11 @@
  */
 package org.exoplatform.clouddrive;
 
+import javax.jcr.Node;
+import javax.jcr.RepositoryException;
 import java.io.InputStream;
 import java.util.Calendar;
 import java.util.Collection;
-
-import javax.jcr.Node;
-import javax.jcr.RepositoryException;
 
 /**
  * An API to synchronize cloud files with its state on provider side. This API is a part of Connector API.<br>
