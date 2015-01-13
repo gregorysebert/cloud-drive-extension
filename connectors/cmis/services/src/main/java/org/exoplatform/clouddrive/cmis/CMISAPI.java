@@ -1809,8 +1809,6 @@ public class CMISAPI {
     return format.format(date);
   }
 
-    //Add ACL gsebert
-
   public void addACL(CmisObject cmisObject, AccessControlList acl) throws RefreshAccessException, CMISException {
       Session session = session();
       List<String> idList = new ArrayList<String>();
@@ -1819,7 +1817,7 @@ public class CMISAPI {
           if (!idList.contains(entry.getIdentity())) {
               idList.add(entry.getIdentity());
               List<String> jcrPerms = acl.getPermissions(entry.getIdentity());
-              Ace aceIn = session.getObjectFactory().createAce(entry.getIdentity(), convertToCmisPerm(jcrPerms));
+              Ace aceIn = session.getObjectFactory().createAce(mapToCmisGroup(entry.getIdentity()), convertToCmisPerm(jcrPerms));
               aceListIn.add(aceIn);
           }
 
@@ -1875,11 +1873,31 @@ public class CMISAPI {
         if (cmisObject.getAcl()!=null) {
             for (Ace entry : cmisObject.getAcl().getAces()) {
                 for (String permission : convertToJCRPerm(entry.getPermissions())) {
-                    listEntry.add(new AccessControlEntry(entry.getPrincipalId(), permission));
+                    listEntry.add(new AccessControlEntry(mapToPlatformGroup(entry.getPrincipalId()), permission));
                 }
             }
             return new AccessControlList(null, listEntry);
         } else return null;
     }
+
+    //MAP cmis group to eXo group
+    private String mapToPlatformGroup(String principal) {
+        if(principal.equals("GROUP_EVERYONE"))
+        {
+            return "any";
+        }
+        return principal;
+    }
+
+    //MAP eXo group to cmis group
+    private String mapToCmisGroup(String principal) {
+        if(principal.equals("any"))
+        {
+            return "GROUP_EVERYONE";
+        }
+        return principal;
+    }
+
+
 
 }
