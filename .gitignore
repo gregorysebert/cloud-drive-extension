@@ -46,3 +46,7 @@ transaction.log
 */rebel-remote.xml
 
 */rebel.xml
+
+connectors/cmis/src/main/resources/rebel-remote.xml
+
+connectors/cmis/src/main/resources/rebel.xml
