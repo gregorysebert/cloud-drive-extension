@@ -42,3 +42,7 @@ target/
 *.swp
 .groovy/
 transaction.log
+
+*/rebel-remote.xml
+
+*/rebel.xml
