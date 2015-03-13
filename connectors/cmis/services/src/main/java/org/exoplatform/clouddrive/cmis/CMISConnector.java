@@ -183,7 +183,7 @@ public class CMISConnector extends CloudDriveConnector {
                                              authURL.toString(),
                                              jcrService);
 
-    provider.initPredefined(predefinedServices);
+    provider.initPredefined(predefinedServices.getServices());
     return provider;
   }
 

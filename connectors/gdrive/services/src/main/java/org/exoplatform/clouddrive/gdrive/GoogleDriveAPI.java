@@ -29,8 +29,12 @@ import com.google.api.client.googleapis.json.GoogleJsonError;
 import com.google.api.client.googleapis.json.GoogleJsonError.ErrorInfo;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.AbstractInputStreamContent;
+import com.google.api.client.http.HttpRequest;
+import com.google.api.client.http.HttpRequestInitializer;
+import com.google.api.client.http.HttpResponse;
 import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.HttpTransport;
+import com.google.api.client.http.HttpUnsuccessfulResponseHandler;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.store.DataStore;
@@ -51,6 +55,7 @@ import com.google.api.services.oauth2.Oauth2Scopes;
 import com.google.api.services.oauth2.model.Userinfoplus;
 
 import org.exoplatform.clouddrive.CloudDriveAccessException;
+import org.exoplatform.clouddrive.CloudDriveConnector;
 import org.exoplatform.clouddrive.CloudDriveException;
 import org.exoplatform.clouddrive.NotFoundException;
 import org.exoplatform.clouddrive.oauth2.UserToken;
@@ -69,8 +74,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Covers calls to Google Drive services and handles related exceptions. <br>
@@ -81,31 +84,29 @@ import java.util.regex.Pattern;
  */
 class GoogleDriveAPI implements DataStoreFactory {
 
-  public static final String       APP_NAME           = "eXo Cloud Drive";
+  public static final String       APP_NAME        = "eXo Cloud Drive";
 
-  public static final String       FOLDER_MIMETYPE    = "application/vnd.google-apps.folder";
+  public static final String       FOLDER_MIMETYPE = "application/vnd.google-apps.folder";
 
-  public static final List<String> SCOPES             = Arrays.asList(DriveScopes.DRIVE,
-                                                                      DriveScopes.DRIVE_FILE,
-                                                                      DriveScopes.DRIVE_APPDATA,
-                                                                      DriveScopes.DRIVE_SCRIPTS,
-                                                                      DriveScopes.DRIVE_APPS_READONLY,
-                                                                      Oauth2Scopes.USERINFO_EMAIL,
-                                                                      Oauth2Scopes.USERINFO_PROFILE);
+  public static final List<String> SCOPES          = Arrays.asList(DriveScopes.DRIVE,
+                                                                   DriveScopes.DRIVE_FILE,
+                                                                   DriveScopes.DRIVE_APPDATA,
+                                                                   DriveScopes.DRIVE_SCRIPTS,
+                                                                   DriveScopes.DRIVE_APPS_READONLY,
+                                                                   Oauth2Scopes.USERINFO_EMAIL,
+                                                                   Oauth2Scopes.USERINFO_PROFILE);
 
-  public static final String       SCOPES_STRING      = scopes();
+  public static final String       SCOPES_STRING   = scopes();
 
-  public static final String       ACCESS_TYPE        = "offline";
+  public static final String       ACCESS_TYPE     = "offline";
 
-  public static final String       APPOVAl_PROMT      = "force";
+  public static final String       APPOVAl_PROMT   = "force";
 
-  public static final String       NO_STATE           = "__no_state_set__";
+  public static final String       NO_STATE        = "__no_state_set__";
 
-  protected static final String    USER_ID            = "user_id";
+  protected static final String    USER_ID         = "user_id";
 
-  protected static final String    USER_EMAIL_ADDRESS = "emailAddress";
-
-  protected static final Log       LOG                = ExoLogger.getLogger(GoogleDriveAPI.class);
+  protected static final Log       LOG             = ExoLogger.getLogger(GoogleDriveAPI.class);
 
   class AuthToken extends UserToken implements CredentialRefreshListener, CredentialCreatedListener {
 
@@ -380,6 +381,38 @@ class GoogleDriveAPI implements DataStoreFactory {
   }
 
   /**
+   * XXX Not used!<br>
+   * Use of this class in builder.setHttpRequestInitializer(new RequestInitializer() causes OAuth2 401
+   * Unauthorized on Google service
+   */
+  @Deprecated
+  class RequestInitializer implements HttpRequestInitializer {
+    @Override
+    public void initialize(HttpRequest request) throws IOException {
+      // enable re-try on IOException
+      request.setRetryOnExecuteIOException(true);
+      request.setNumberOfRetries(CloudDriveConnector.PROVIDER_REQUEST_ATTEMPTS);
+      request.setUnsuccessfulResponseHandler(new HttpUnsuccessfulResponseHandler() {
+        @Override
+        public boolean handleResponse(HttpRequest request, HttpResponse response, boolean supportsRetry) throws IOException {
+          // TODO check here for Backend error or others what we could only re-try
+
+          if (supportsRetry) {
+            // wait a bit before next attempt
+            try {
+              Thread.sleep(CloudDriveConnector.PROVIDER_REQUEST_ATTEMPT_TIMEOUT);
+            } catch (InterruptedException e) {
+              LOG.warn("Interrupted while waiting for a next attempt of drive operation: " + e.getMessage());
+              Thread.currentThread().interrupt();
+            }
+          }
+          return supportsRetry; // re-try all what currently supported
+        }
+      });
+    }
+  }
+
+  /**
    * Credentials for request authentication.
    */
   final Credential credential;
@@ -395,12 +428,6 @@ class GoogleDriveAPI implements DataStoreFactory {
    * User info API.
    */
   final Oauth2     oauth2;
-
-  /**
-   * Timezone regexp pattern for adapting Google's date format to SimpleDateFormatter supported.
-   */
-  // full date pattern: \\d{4}-[01]\\d-[0-3]\\dT[0-2]\\d:[0-5]\\d:[0-5]\\d\\.\\d+([+-][0-2]\\d:[0-5]\\d|Z)
-  final Pattern    tzPattern = Pattern.compile("([+-][0-2]\\d:[0-5]\\d|Z)$");
 
   /**
    * Create Google Drive API from OAuth2 authentication code.
@@ -547,6 +574,9 @@ class GoogleDriveAPI implements DataStoreFactory {
   Userinfoplus userInfo() throws GoogleDriveException, CloudDriveException {
     Userinfoplus userInfo;
     try {
+      // XXX FYI this caused Unauthorized: >>> .setHttpRequestInitializer(new RequestInitializer()
+      // Oauth2 oauth2 = new Oauth2.Builder(new NetHttpTransport(), new JacksonFactory(),
+      // credential).build();
       userInfo = oauth2.userinfo().get().execute();
     } catch (GoogleJsonResponseException e) {
       GoogleJsonError error = e.getDetails();
@@ -630,6 +660,9 @@ class GoogleDriveAPI implements DataStoreFactory {
   File insert(File file, AbstractInputStreamContent content) throws GoogleDriveException,
                                                             CloudDriveAccessException {
     try {
+      // TODO ensure the parent exists before content uploading, otherwise it fill be slow with large sets of
+      // files. See BoxAPI.createFile().
+
       return drive.files().insert(file, content).execute();
     } catch (GoogleJsonResponseException e) {
       if (isInsufficientPermissions(e)) {
@@ -856,6 +889,20 @@ class GoogleDriveAPI implements DataStoreFactory {
   }
 
   /**
+   * Update current credentials with new refresh token from given API instance.
+   */
+  @Deprecated
+  // TODO not used
+  void updateToken(GoogleDriveAPI refreshApi) throws GoogleDriveException {
+    credential.setRefreshToken(refreshApi.credential.getRefreshToken());
+    try {
+      credential.refreshToken();
+    } catch (IOException e) {
+      throw new GoogleDriveException("Error updating access token: " + e.getMessage(), e);
+    }
+  }
+
+  /**
    * Update OAuth2 token to a new one.
    * 
    * @param newToken {@link AuthToken}
@@ -907,14 +954,13 @@ class GoogleDriveAPI implements DataStoreFactory {
       calendar.setTime(d);
       return calendar;
     }
-    
-    // Google keep dates in form "2014-12-24T13:45:13.620+02:00" - we need convert timezone to RFC 822 form
-    Matcher dm = tzPattern.matcher(datestring);
-    if (dm.find() && dm.groupCount() >= 1) {
-      String tz = dm.group(1);
-      datestring = dm.replaceFirst(tz.replace(":", ""));
-    }
-
+    // step one, split off the timezone.
+    String firstpart = datestring.substring(0, datestring.lastIndexOf('-'));
+    String secondpart = datestring.substring(datestring.lastIndexOf('-'));
+    // step two, remove the colon from the timezone offset
+    secondpart = secondpart.substring(0, secondpart.indexOf(':'))
+        + secondpart.substring(secondpart.indexOf(':') + 1);
+    datestring = firstpart + secondpart;
     SimpleDateFormat s = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
     try {
       d = s.parse(datestring);

@@ -306,6 +306,7 @@ public class CloudDriveServiceImpl implements CloudDriveService, Startable {
           } else {
             // given user already connected to another node (possible if node was renamed in JCR), we cannot
             // proceed
+            // TODO should we point an user email in the message?
             LOG.warn("User " + user.getEmail() + " already connected to another node " + localPath
                 + ", cannot connect it to " + driveNode.getPath());
             throw new UserAlreadyConnectedException("User " + user.getEmail()

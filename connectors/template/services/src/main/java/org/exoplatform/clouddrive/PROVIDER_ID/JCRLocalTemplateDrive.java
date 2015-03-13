@@ -249,11 +249,11 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
      * {@inheritDoc}
      */
     @Override
-    public CloudFile createFile(Node fileNode,
-                                Calendar created,
-                                Calendar modified,
-                                String mimeType,
-                                InputStream content) throws CloudDriveException, RepositoryException {
+    public String createFile(Node fileNode,
+                             Calendar created,
+                             Calendar modified,
+                             String mimeType,
+                             InputStream content) throws CloudDriveException, RepositoryException {
 
       String parentId = getParentId(fileNode);
       String title = getTitle(fileNode);
@@ -290,41 +290,24 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
       String createdBy = "TODO"; // file.getCreatedBy().getLogin();
       String modifiedBy = "TODO"; // file.getModifiedBy().getLogin();
       String type = "TODO"; // file.getType();
-      long size = 0; // TODO file.getSize()
 
       initFile(fileNode, id, name, type, link, embedLink, //
                thumbnailLink, // downloadLink
                createdBy, // author
                modifiedBy, // lastUser
                created,
-               modified,
-               size);
+               modified);
       initCloudItem(fileNode, file);
 
-      return new JCRLocalCloudFile(fileNode.getPath(),
-                                   id,
-                                   name,
-                                   link,
-                                   null,
-                                   previewLink(fileNode),
-                                   thumbnailLink,
-                                   type,
-                                   mimeTypes.getMimeTypeMode(type, name),
-                                   modifiedBy,
-                                   createdBy,
-                                   created,
-                                   modified,
-                                   size,
-                                   fileNode,
-                                   true);
+      return id;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public CloudFile createFolder(Node folderNode, Calendar created) throws CloudDriveException,
-                                                                    RepositoryException {
+    public String createFolder(Node folderNode, Calendar created) throws CloudDriveException,
+                                                                 RepositoryException {
 
       // TODO create folder logic
 
@@ -365,26 +348,14 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
                  created,
                  created); // created as modified here
       initCloudItem(folderNode, folder);
-
-      return new JCRLocalCloudFile(folderNode.getPath(),
-                                   id,
-                                   name,
-                                   link,
-                                   type,
-                                   modifiedBy,
-                                   createdBy,
-                                   created,
-                                   created,
-                                   folderNode,
-                                   true);
+      return id;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public CloudFile updateFile(Node fileNode, Calendar modified) throws CloudDriveException,
-                                                                 RepositoryException {
+    public void updateFile(Node fileNode, Calendar modified) throws CloudDriveException, RepositoryException {
       // TODO logic of existing file metadata and parent (location) update.
 
       Object file = api.updateFile(getParentId(fileNode), getId(fileNode), getTitle(fileNode), modified);
@@ -399,43 +370,23 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
         modified = Calendar.getInstance(); // api.parseDate(file.getModifiedAt());
         String modifiedBy = "TODO"; // file.getModifiedBy().getLogin();
         String type = "TODO"; // item.getType();
-        long size = 0; // TODO file.getSize()
 
         initFile(fileNode, id, name, type, link, embedLink, //
                  thumbnailLink, // downloadLink
                  createdBy, // author
                  modifiedBy, // lastUser
                  created,
-                 modified,
-                 size);
+                 modified);
         initCloudItem(fileNode, file);
-
-        return new JCRLocalCloudFile(fileNode.getPath(),
-                                     id,
-                                     name,
-                                     link,
-                                     null,
-                                     previewLink(fileNode),
-                                     thumbnailLink,
-                                     type,
-                                     mimeTypes.getMimeTypeMode(type, name),
-                                     modifiedBy,
-                                     createdBy,
-                                     created,
-                                     modified,
-                                     size,
-                                     fileNode,
-                                     true);
       } // else file wasn't changed actually
-      return null;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public CloudFile updateFolder(Node folderNode, Calendar modified) throws CloudDriveException,
-                                                                     RepositoryException {
+    public void updateFolder(Node folderNode, Calendar modified) throws CloudDriveException,
+                                                                RepositoryException {
 
       // TODO Update existing folder metadata and parent (location).
 
@@ -460,28 +411,15 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
                    created,
                    modified);
         initCloudItem(folderNode, folder);
-
-        return new JCRLocalCloudFile(folderNode.getPath(),
-                                     id,
-                                     name,
-                                     link,
-                                     type,
-                                     modifiedBy,
-                                     createdBy,
-                                     created,
-                                     modified,
-                                     folderNode,
-                                     true);
       } // else folder wasn't changed actually
-      return null;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public CloudFile updateFileContent(Node fileNode, Calendar modified, String mimeType, InputStream content) throws CloudDriveException,
-                                                                                                              RepositoryException {
+    public void updateFileContent(Node fileNode, Calendar modified, String mimeType, InputStream content) throws CloudDriveException,
+                                                                                                         RepositoryException {
       // Update existing file content and its metadata.
       Object file = api.updateFileContent(getParentId(fileNode),
                                           getId(fileNode),
@@ -498,41 +436,22 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
       modified = Calendar.getInstance(); // api.parseDate(file.getModifiedAt());
       String modifiedBy = "TODO"; // file.getModifiedBy().getLogin();
       String type = "TODO"; // folder.getType();
-      long size = 0; // TODO file.getSize()
 
       initFile(fileNode, id, name, type, link, embedLink, //
                thumbnailLink, // downloadLink
                createdBy, // author
                modifiedBy, // lastUser
                created,
-               modified,
-               size);
+               modified);
       initCloudItem(fileNode, file);
-
-      return new JCRLocalCloudFile(fileNode.getPath(),
-                                   id,
-                                   name,
-                                   link,
-                                   null,
-                                   previewLink(fileNode),
-                                   thumbnailLink,
-                                   type,
-                                   mimeTypes.getMimeTypeMode(type, name),
-                                   modifiedBy,
-                                   createdBy,
-                                   created,
-                                   modified,
-                                   size,
-                                   fileNode,
-                                   true);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public CloudFile copyFile(Node srcFileNode, Node destFileNode) throws CloudDriveException,
-                                                                  RepositoryException {
+    public String copyFile(Node srcFileNode, Node destFileNode) throws CloudDriveException,
+                                                               RepositoryException {
       Object file = api.copyFile(getId(srcFileNode), getParentId(destFileNode), getTitle(destFileNode));
       String id = "TODO"; // file.getId();
       String name = "TODO"; // file.getName();
@@ -544,41 +463,23 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
       Calendar created = Calendar.getInstance(); // api.parseDate(file.getCreatedAt());
       Calendar modified = Calendar.getInstance(); // api.parseDate(file.getModifiedAt());
       String type = "TODO"; // folder.getType();
-      long size = 0; // TODO file.getSize()
 
       initFile(destFileNode, id, name, type, link, embedLink, //
                thumbnailLink, // thumbnailLink
                createdBy, // author
                modifiedBy, // lastUser
                created,
-               modified,
-               size);
+               modified);
       initCloudItem(destFileNode, file);
-
-      return new JCRLocalCloudFile(destFileNode.getPath(),
-                                   id,
-                                   name,
-                                   link,
-                                   null,
-                                   previewLink(destFileNode),
-                                   thumbnailLink,
-                                   type,
-                                   mimeTypes.getMimeTypeMode(type, name),
-                                   modifiedBy,
-                                   createdBy,
-                                   created,
-                                   modified,
-                                   size,
-                                   destFileNode,
-                                   true);
+      return id;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public CloudFile copyFolder(Node srcFolderNode, Node destFolderNode) throws CloudDriveException,
-                                                                        RepositoryException {
+    public String copyFolder(Node srcFolderNode, Node destFolderNode) throws CloudDriveException,
+                                                                     RepositoryException {
       Object folder = api.copyFolder(getId(srcFolderNode),
                                      getParentId(destFolderNode),
                                      getTitle(destFolderNode));
@@ -598,36 +499,23 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
                  created,
                  modified);
       initCloudItem(destFolderNode, folder);
-
-      return new JCRLocalCloudFile(destFolderNode.getPath(),
-                                   id,
-                                   name,
-                                   link,
-                                   type,
-                                   modifiedBy,
-                                   createdBy,
-                                   created,
-                                   modified,
-                                   destFolderNode,
-                                   true);
+      return id;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean removeFile(String id) throws CloudDriveException, RepositoryException {
+    public void removeFile(String id) throws CloudDriveException, RepositoryException {
       api.deleteFile(id);
-      return true;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public boolean removeFolder(String id) throws CloudDriveException, RepositoryException {
+    public void removeFolder(String id) throws CloudDriveException, RepositoryException {
       api.deleteFolder(id);
-      return true;
     }
 
     /**
@@ -656,22 +544,22 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
      * {@inheritDoc}
      */
     @Override
-    public CloudFile untrashFile(Node fileNode) throws CloudDriveException, RepositoryException {
+    public boolean untrashFile(Node fileNode) throws CloudDriveException, RepositoryException {
       Object untrashed = api.untrashFile(fileAPI.getId(fileNode), fileAPI.getTitle(fileNode));
       // TODO actual logic to check if file was successfully untrashed (or may be not if
       // permissions or anything else prevented that)
-      return (CloudFile) untrashed;
+      return true;
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public CloudFile untrashFolder(Node folderNode) throws CloudDriveException, RepositoryException {
+    public boolean untrashFolder(Node folderNode) throws CloudDriveException, RepositoryException {
       Object untrashed = api.untrashFolder(fileAPI.getId(folderNode), fileAPI.getTitle(folderNode));
       // TODO actual logic to check if folder was successfully trashed (or may be not if
       // permissions or anything else prevented that)
-      return (CloudFile) untrashed;
+      return true;
     }
 
     /**
@@ -1042,7 +930,7 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
 
     // File/folder size
     // TODO exo's property to show the size: jcr:content's length?
-    localNode.setProperty("ecd:size", ""); // item.getSize()
+    localNode.setProperty("PROVIDER_ID:size", ""); // item.getSize()
 
     // properties below not actually used by the Cloud Drive,
     // they are just for information available to PLF user
@@ -1089,10 +977,8 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
     Calendar modified = Calendar.getInstance(); // api.parseDate(item.getModifiedAt());
     String createdBy = ""; // item.getCreatedBy().getLogin();
     String modifiedBy = ""; // item.getModifiedBy().getLogin();
-    long size = 0; // TODO file.getSize()
 
     String link, embedLink, thumbnailLink;
-    JCRLocalCloudFile file;
     if (isFolder) {
       link = embedLink = api.getLink(item);
       thumbnailLink = null;
@@ -1105,17 +991,6 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
                    modified);
         initCloudItem(node, item);
       }
-      file = new JCRLocalCloudFile(node.getPath(),
-                                   id,
-                                   name,
-                                   link,
-                                   type,
-                                   modifiedBy,
-                                   createdBy,
-                                   created,
-                                   modified,
-                                   node,
-                                   true);
     } else {
       link = api.getLink(item);
       embedLink = api.getEmbedLink(item);
@@ -1129,29 +1004,28 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
                  createdBy,
                  modifiedBy,
                  created,
-                 modified,
-                 size);
+                 modified);
         initCloudItem(node, item);
       }
-      file = new JCRLocalCloudFile(node.getPath(),
-                                   id,
-                                   name,
-                                   link,
-                                   null,
-                                   embedLink,
-                                   thumbnailLink,
-                                   type,
-                                   typeMode,
-                                   createdBy,
-                                   modifiedBy,
-                                   created,
-                                   modified,
-                                   size,
-                                   node,
-                                   changed);
     }
 
-    return file;
+    return new JCRLocalCloudFile(node.getPath(),
+                                 id,
+                                 name,
+                                 link,
+                                 editLink(node),
+                                 embedLink,
+                                 thumbnailLink,
+                                 type,
+                                 typeMode,
+                                 createdBy,
+                                 modifiedBy,
+                                 created,
+                                 modified,
+                                 isFolder,
+                                 false,
+                                 node,
+                                 changed);
   }
 
   /**
@@ -1161,6 +1035,15 @@ public class JCRLocalTemplateDrive extends JCRLocalCloudDrive implements UserTok
   protected String previewLink(Node fileNode) throws RepositoryException {
     // TODO return specially formatted preview link or using a special URL if that required by the cloud API
     return super.previewLink(fileNode);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  protected String editLink(Node fileNode) {
+    // TODO Return actual link for embedded editing (in iframe) or null if edit not supported
+    return null;
   }
 
   protected boolean notInRange(String path, Collection<String> range) {

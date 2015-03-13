@@ -45,9 +45,7 @@
 					c = c.substring(1, c.length);
 				}
 				if (c.indexOf(nameEQ) == 0) {
-					var v = c.substring(nameEQ.length, c.length);
-					// clean value from leading quotes (actual if set via eXo WS)
-					return decodeURIComponent(v.match(/([^\"]+)/g));
+					return decodeURIComponent(c.substring(nameEQ.length, c.length));
 				}
 			}
 			return null;

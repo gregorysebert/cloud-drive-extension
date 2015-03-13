@@ -37,56 +37,56 @@ public class AcceptedCloudFile implements CloudFile {
   }
 
   /**
-   * {@inheritDoc}
+   * @return the isSymlink
    */
   public boolean isSymlink() {
     return false;
   }
 
   /**
-   * {@inheritDoc}
+   * @return the id
    */
   public String getId() {
     return null;
   }
 
   /**
-   * {@inheritDoc}
+   * @return the title
    */
   public String getTitle() {
     return null;
   }
 
   /**
-   * {@inheritDoc}
+   * @return the link
    */
   public String getLink() {
     return null;
   }
 
   /**
-   * {@inheritDoc}
-   */
-  public String getEditLink() {
-    return null;
-  }
-
-  /**
-   * {@inheritDoc}
+   * @return the previewLink
    */
   public String getPreviewLink() {
     return null;
   }
 
   /**
-   * {@inheritDoc}
+   * @return the editLink
+   */
+  public String getEditLink() {
+    return null;
+  }
+
+  /**
+   * @return the thumbnailLink
    */
   public String getThumbnailLink() {
     return null;
   }
 
   /**
-   * {@inheritDoc}
+   * @return the type
    */
   public String getType() {
     return null;
@@ -95,6 +95,7 @@ public class AcceptedCloudFile implements CloudFile {
   /**
    * {@inheritDoc}
    */
+  @Override
   public String getTypeMode() {
     return null;
   }
@@ -107,14 +108,14 @@ public class AcceptedCloudFile implements CloudFile {
   }
 
   /**
-   * {@inheritDoc}
+   * @return the author
    */
   public String getAuthor() {
     return null;
   }
 
   /**
-   * {@inheritDoc}
+   * @return the createdDate
    */
   public Calendar getCreatedDate() {
     return null;
@@ -128,34 +129,27 @@ public class AcceptedCloudFile implements CloudFile {
   }
 
   /**
-   * {@inheritDoc}
+   * @return the isFolder
    */
   public boolean isFolder() {
     return false;
   }
 
   /**
-   * {@inheritDoc}
+   * @return the path
    */
   public String getPath() {
     return path;
   }
 
-<<<<<<< HEAD
   public AccessControlList getACL() {
         return null;
     }
 
     /**
    * Return <code>true</code> always.
-=======
-  /**
-   * {@inheritDoc}
->>>>>>> FETCH_HEAD
    */
-  @Override
-  public long getSize() {
-    return 0; // zero for accepted
+  public boolean isCreating() {
+    return true;
   }
-
 }

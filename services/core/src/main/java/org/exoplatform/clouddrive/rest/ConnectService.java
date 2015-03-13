@@ -101,7 +101,7 @@ public class ConnectService implements ResourceContainer {
   /**
    * Init cookie expire time in seconds.
    */
-  public static final int       INIT_COOKIE_EXPIRE     = 300;                                      // 5min
+  public static final int       INIT_COOKIE_EXPIRE     = 60;                                       // 1min
 
   /**
    * Connect cookie expire time in seconds.
@@ -237,7 +237,7 @@ public class ConnectService implements ResourceContainer {
 
     final Lock       lock = new ReentrantLock();
 
-    String           error;
+    Throwable        error;
 
     ConnectProcess(String workspaceName, CloudDrive drive, ConversationState conversation) throws CloudDriveException,
         RepositoryException {
@@ -274,14 +274,13 @@ public class ConnectService implements ResourceContainer {
       lock.lock();
       // unregister listener
       drive.removeListener(this);
-
-      this.error = drive.getUser().getProvider().getErrorMessage(error);
-
+      this.error = error;
       try {
         rollback();
       } catch (Throwable e) {
         LOG.warn("Error removing the drive Node connected with error (" + error.getMessage() + "). "
-            + e.getMessage(), e);
+                     + e.getMessage(),
+                 e);
       } finally {
         lock.unlock();
         // log error here as the connect was executed asynchronously
@@ -384,6 +383,7 @@ public class ConnectService implements ResourceContainer {
    * @param jsessionsId
    * @param jsessionsIdSSO
    * @param connectId
+   * @param initId
    * @return {@link Response}
    */
   @POST
@@ -393,7 +393,8 @@ public class ConnectService implements ResourceContainer {
                                @FormParam("path") String path,
                                @CookieParam("JSESSIONID") Cookie jsessionsId,
                                @CookieParam("JSESSIONIDSSO") Cookie jsessionsIdSSO,
-                               @CookieParam(CONNECT_COOKIE) Cookie connectId) {
+                               @CookieParam(CONNECT_COOKIE) Cookie connectId,
+                               @CookieParam(INIT_COOKIE) Cookie initId) {
 
     ConnectResponse resp = new ConnectResponse();
     String host = locator.getServiceHost(uriInfo.getRequestUri().getHost());
@@ -460,7 +461,9 @@ public class ConnectService implements ResourceContainer {
                             + ". Cannot create node under " + path, e);
                         return resp.connectError("Error creating node for the drive: storage error.",
                                                  cid.toString(),
-                                                 host).status(Status.INTERNAL_SERVER_ERROR).build();
+                                                 host)
+                                   .status(Status.INTERNAL_SERVER_ERROR)
+                                   .build();
                       }
                     }
                   }
@@ -596,7 +599,16 @@ public class ConnectService implements ResourceContainer {
         try {
           if (connect.error != null) {
             // KO:error during the connect
-            resp.error(connect.error).status(Status.INTERNAL_SERVER_ERROR);
+            // TODO hack for 503 from Google, move this logic to Google connector, as well as access_denied
+            String error = connect.error.getMessage();
+            if (error == null) {
+              // NPE case
+              error = "null.";
+            }
+            if (error.indexOf("backendError") >= 0) {
+              error = "Google backend error. Try again later.";
+            }
+            resp.error(error).status(Status.INTERNAL_SERVER_ERROR);
           } else {
             // OK:connected or accepted (in progress)
             // don't send files each time but on done only
@@ -749,7 +761,7 @@ public class ConnectService implements ResourceContainer {
                                         provider.getName(),
                                         iid.toString(),
                                         baseHost)
-                  // TODO UNAUTHORIZED ?
+                             // TODO UNAUTHORIZED ?
                              .status(Status.BAD_REQUEST)
                              .build();
                 }
@@ -759,17 +771,24 @@ public class ConnectService implements ResourceContainer {
                                       connect.host,
                                       provider.getName(),
                                       iid.toString(),
-                                      baseHost).status(Status.BAD_REQUEST).build();
+                                      baseHost)
+                           .status(Status.BAD_REQUEST)
+                           .build();
               }
             } else {
               // we have an error from provider
               LOG.warn(provider.getName() + " error: " + error);
 
-              return resp.authError(provider.getErrorMessage(error),
-                                    connect.host,
-                                    provider.getName(),
-                                    iid.toString(),
-                                    baseHost).status(Status.BAD_REQUEST).build();
+              // TODO hack for access_denied from Google, move this logic to Google connector
+              if (error.indexOf("access_denied") >= 0) {
+                resp.authError("Acccess denied.", connect.host, provider.getName(), iid.toString(), baseHost)
+                    .status(Status.FORBIDDEN);
+              } else {
+                resp.authError(error, connect.host, provider.getName(), iid.toString(), baseHost)
+                    .status(Status.BAD_REQUEST);
+              }
+
+              return resp.build();
             }
           } else {
             LOG.error("Authentication was not initiated for " + providerId + " but request to "
@@ -778,15 +797,19 @@ public class ConnectService implements ResourceContainer {
                                   connect.host,
                                   provider.getName(),
                                   iid.toString(),
-                                  baseHost).status(Status.INTERNAL_SERVER_ERROR).build();
+                                  baseHost)
+                       .status(Status.INTERNAL_SERVER_ERROR)
+                       .build();
           }
         } else {
-          LOG.warn("Authentication not initiated for " + providerId + " and id " + initId);
+          LOG.warn("Authentication was not initiated for " + providerId + " and id " + initId);
           return resp.authError("Authentication request expired. Try again later.",
                                 baseHost,
                                 null,
                                 iid.toString(),
-                                baseHost).status(Status.BAD_REQUEST).build();
+                                baseHost)
+                     .status(Status.BAD_REQUEST)
+                     .build();
         }
       } catch (Throwable e) {
         LOG.error("Error initializing drive provider by id " + providerId, e);

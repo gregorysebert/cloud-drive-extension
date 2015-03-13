@@ -31,6 +31,15 @@ public class BaseCloudDriveListener implements CloudDriveListener {
    * {@inheritDoc}
    */
   @Override
+  public FileChangeAction getFileChangeAction() {
+    // no interest
+    return null;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
   public void onConnect(CloudDriveEvent event) {
     // nothing
   }

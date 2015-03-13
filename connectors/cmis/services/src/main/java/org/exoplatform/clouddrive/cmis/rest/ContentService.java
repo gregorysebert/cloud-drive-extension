@@ -21,7 +21,6 @@ package org.exoplatform.clouddrive.cmis.rest;
 import org.exoplatform.clouddrive.CloudDrive;
 import org.exoplatform.clouddrive.CloudDriveException;
 import org.exoplatform.clouddrive.CloudDriveService;
-import org.exoplatform.clouddrive.NotFoundException;
 import org.exoplatform.clouddrive.cmis.ContentReader;
 import org.exoplatform.clouddrive.cmis.JCRLocalCMISDrive;
 import org.exoplatform.clouddrive.cmis.ecms.viewer.storage.DocumentNotFoundException;
@@ -34,6 +33,7 @@ import org.exoplatform.services.jcr.RepositoryService;
 import org.exoplatform.services.jcr.ext.app.SessionProviderService;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
+import org.exoplatform.services.rest.ExtHttpHeaders;
 import org.exoplatform.services.rest.resource.ResourceContainer;
 
 import javax.annotation.security.RolesAllowed;
@@ -41,6 +41,7 @@ import javax.jcr.LoginException;
 import javax.jcr.RepositoryException;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
@@ -142,11 +143,6 @@ public class ContentService implements ResourceContainer {
             LOG.warn("Error login to read cloud file content " + workspace + ":" + path + ": "
                 + e.getMessage());
             return Response.status(Status.UNAUTHORIZED).entity("Authentication error.").build();
-          } catch (NotFoundException e) {
-            LOG.warn("File not found to read its content " + workspace + ":" + path, e);
-            return Response.status(Status.NOT_FOUND)
-                           .entity("File not found. " + e.getMessage())
-                           .build();
           } catch (CloudDriveException e) {
             LOG.warn("Error reading file content " + workspace + ":" + path, e);
             return Response.status(Status.BAD_REQUEST)
@@ -236,6 +232,8 @@ public class ContentService implements ResourceContainer {
 
                 ImageFile image = pdfFile.getPageImage(page, rotation, scale);
 
+                // TODO instead of use Content-Disposition for file name, keep file name in URL
+                // http://stackoverflow.com/questions/1361604/how-to-encode-utf8-filename-for-http-headers-python-django
                 return Response.ok(image.getStream(), image.getType())
                                .header("Last-Modified", pdfFile.getLastModified())
                                .header("Content-Length", image.getLength())
@@ -313,6 +311,8 @@ public class ContentService implements ResourceContainer {
                 ResponseBuilder resp = Response.ok(pdfFile.getStream(), pdfFile.getMimeType())
                                                .header("Last-Modified", pdfFile.getLastModified())
                                                .header("Content-Length", pdfFile.getLength());
+                // TODO instead of use Content-Disposition for file name, keep file name in URL
+                // http://stackoverflow.com/questions/1361604/how-to-encode-utf8-filename-for-http-headers-python-django
                 resp.header("Content-Disposition", "attachment; filename=\"" + pdfFile.getName() + "\"");
                 return resp.build();
               } else {

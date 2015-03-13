@@ -49,24 +49,23 @@ public interface CloudFile {
   String getLink();
 
   /**
-   * Link for editing a file on cloud provider. This link can be used for opening a file in new window or
-   * embedding.
-   * 
-   * @return {@link String} remote editor link or <code>null</code> if edit not supported
-   */
-  String getEditLink();
-
-  /**
    * Preview link of a file if cloud provider supports such feature.
    * 
-   * @return {@link String} a preview link or <code>null</code> if preview not offered
+   * @return {@link String} a preview link or <code>null</code>
    */
   String getPreviewLink();
 
   /**
+   * File editing link if cloud provider supports such feature.
+   * 
+   * @return {@link String} a editing link or <code>null</code>
+   */
+  String getEditLink();
+
+  /**
    * File thumbnail link if cloud provider supports such feature.
    * 
-   * @return {@link String} a thumbnail link or <code>null</code> if thumbnail support not offered
+   * @return {@link String} a thumbnail link or <code>null</code>
    * 
    * @return
    */
@@ -115,30 +114,17 @@ public interface CloudFile {
   Calendar getModifiedDate();
 
   /**
+   * @return
+   */
+  boolean isFolder();
+
+  /**
    * Path to the cloud file in local storage.
    * 
    * @return {@link String}
    */
   String getPath();
 
-<<<<<<< HEAD
     /* Manage Permission gsebert */
     AccessControlList getACL();
-=======
-  /**
-   * File size in bytes. It is an actual file size from cloud side. If size not available or it is a folder
-   * then size is -1.
-   * 
-   * @return {@link Long} file size in bytes (-1 for folder or when cannot be determined)
-   */
-  long getSize();
-
-  /**
-   * Return <code>true</code> if this cloud file represent a folder object.
-   * 
-   * @return <code>true</code> if it is a folder, <code>false</code> otherwise
-   */
-  boolean isFolder();
-
->>>>>>> FETCH_HEAD
 }

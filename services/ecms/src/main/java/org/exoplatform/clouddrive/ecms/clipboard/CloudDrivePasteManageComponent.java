@@ -20,21 +20,17 @@ package org.exoplatform.clouddrive.ecms.clipboard;
 
 import org.exoplatform.clouddrive.ecms.symlink.CloudFileSymlink;
 import org.exoplatform.clouddrive.ecms.symlink.CloudFileSymlinkException;
+import org.exoplatform.ecm.jcr.model.ClipboardCommand;
 import org.exoplatform.ecm.webui.component.explorer.UIJCRExplorer;
 import org.exoplatform.ecm.webui.component.explorer.UIWorkingArea;
 import org.exoplatform.ecm.webui.component.explorer.rightclick.manager.PasteManageComponent;
-import org.exoplatform.services.cms.clipboard.ClipboardService;
-import org.exoplatform.services.cms.clipboard.jcr.model.ClipboardCommand;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
-import org.exoplatform.services.security.ConversationState;
-import org.exoplatform.services.wcm.utils.WCMCoreUtils;
 import org.exoplatform.webui.config.annotation.ComponentConfig;
 import org.exoplatform.webui.config.annotation.EventConfig;
 import org.exoplatform.webui.core.UIApplication;
 import org.exoplatform.webui.event.Event;
 
-import java.util.Deque;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -72,12 +68,10 @@ public class CloudDrivePasteManageComponent extends PasteManageComponent {
           symlinks.setDestination(destParam);
         }
 
-        String userId = ConversationState.getCurrent().getIdentity().getUserId();
-        ClipboardService clipboardService = WCMCoreUtils.getService(ClipboardService.class);
-        Deque<ClipboardCommand> allClipboards = new LinkedList<ClipboardCommand>(clipboardService.getClipboardList(userId,
-                                                                                                                   false));
+        LinkedList<ClipboardCommand> allClipboards = uiExplorer.getAllClipBoard();
         if (allClipboards.size() > 0) {
-          Set<ClipboardCommand> virtClipboards = clipboardService.getClipboardList(userId, true);
+          UIWorkingArea uiWorkingArea = event.getSource().getParent();
+          List<ClipboardCommand> virtClipboards = uiWorkingArea.getVirtualClipboards();
           ClipboardCommand current = null; // will refer to last attempted to link
           if (virtClipboards.isEmpty()) { // single file
             current = allClipboards.getLast();

@@ -69,41 +69,37 @@ import javax.inject.Inject;
  */
 public class CMISLoginController {
 
-  private static final Log                                       LOG           = ExoLogger.getLogger(CMISLoginController.class);
+  private static final Log                                     LOG           = ExoLogger.getLogger(CMISLoginController.class);
 
-  private static final String                                    KEY_ALGORITHM = "RSA";
+  private static final String                                  KEY_ALGORITHM = "RSA";
 
   @Inject
   @Path("login.gtmpl")
-  org.exoplatform.clouddrive.cmis.portlet.templates.login        login;
+  org.exoplatform.clouddrive.cmis.portlet.templates.login      login;
 
   @Inject
   @Path("userkey.gtmpl")
-  org.exoplatform.clouddrive.cmis.portlet.templates.userkey      userKey;
+  org.exoplatform.clouddrive.cmis.portlet.templates.userkey    userKey;
 
   @Inject
   @Path("repository.gtmpl")
-  org.exoplatform.clouddrive.cmis.portlet.templates.repository   repository;
+  org.exoplatform.clouddrive.cmis.portlet.templates.repository repository;
 
   @Inject
   @Path("error.gtmpl")
-  org.exoplatform.clouddrive.cmis.portlet.templates.error        error;
+  org.exoplatform.clouddrive.cmis.portlet.templates.error      error;
 
   @Inject
-  @Path("errorMessage.gtmpl")
-  org.exoplatform.clouddrive.cmis.portlet.templates.errorMessage errorMessage;
+  @Path("message.gtmpl")
+  org.exoplatform.clouddrive.cmis.portlet.templates.message    message;
 
   @Inject
-  @Path("warnMessage.gtmpl")
-  org.exoplatform.clouddrive.cmis.portlet.templates.warnMessage  warnMessage;
+  CodeAuthentication                                           authService;
 
   @Inject
-  CodeAuthentication                                             authService;
+  CloudDriveService                                            cloudDrives;
 
-  @Inject
-  CloudDriveService                                              cloudDrives;
-
-  private final ConcurrentHashMap<String, PrivateKey>            keys          = new ConcurrentHashMap<String, PrivateKey>();
+  private final ConcurrentHashMap<String, PrivateKey>          keys          = new ConcurrentHashMap<String, PrivateKey>();
 
   @View
   public Response index(RenderContext render, String providerId) {
@@ -136,11 +132,7 @@ public class CMISLoginController {
   }
 
   Response errorMessage(String text) {
-    return errorMessage.with().message(text).ok();
-  }
-
-  Response warnMessage(String text) {
-    return warnMessage.with().message(text).ok();
+    return message.with().message(text).ok();
   }
 
   @Ajax
@@ -162,14 +154,11 @@ public class CMISLoginController {
             try {
               return repository.with().code(code).repositories(cmisUser.getRepositories()).ok();
             } catch (WrongCMISProviderException e) {
-              LOG.error("Login error: wrong CMIS service URL for " + providerName + ": " + e.getMessage());
+              LOG.error("Login error: wrong CMIS service URL for " + providerName, e);
               return errorMessage("Wrong service URL for " + providerName);
-            } catch (CloudDriveAccessException e) {
-              LOG.error("Login error: access denied for " + providerName + ": " + e.getMessage());
-              return errorMessage("Access denied for " + providerName + ". Check your username and password and try again.");
             } catch (CMISException e) {
               LOG.error("Login error: error reading repositories list", e);
-              return errorMessage("Error reading repositories list from " + providerName + ". "
+              return errorMessage("Error reading repositories list from " + cmisProvider.getName() + ". "
                   + e.getMessage());
             }
           } catch (InvalidKeyException e) {
@@ -193,7 +182,8 @@ public class CMISLoginController {
                 + ". Ensure you are using correct username and password and try again.");
           } catch (CloudDriveException e) {
             LOG.error("Login error: authentication error", e);
-            return errorMessage("Authentication error for " + userName + ". " + e.getMessage());
+            return errorMessage("Authentication error for " + userName + ". "
+                + e.getMessage());
           }
         } else {
           LOG.warn("Wrong login: password required for " + userName);
@@ -252,7 +242,13 @@ public class CMISLoginController {
       KeyPair keyPair = keyGen.genKeyPair();
       PublicKey publicKey = keyPair.getPublic();
       PrivateKey privateKey = keyPair.getPrivate();
+
       keys.put(user, privateKey);
+      // TODO cleanup
+      // StringBuilder retString = new StringBuilder();
+      // for (int i = 0; i < key.length; ++i) {
+      // retString.append(Integer.toHexString(0x0100 + (key[i] & 0x00FF)).substring(1));
+      // }
       return Base64.encodeBytes(publicKey.getEncoded());
     } catch (NoSuchAlgorithmException e) {
       LOG.error("Error creating " + KEY_ALGORITHM + " key pair for user " + user, e);

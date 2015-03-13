@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2003-2014 eXo Platform SAS.
  *
@@ -27,6 +28,7 @@ package org.exoplatform.clouddrive.cmis.portlet;
  */
 public class CMISLoginException extends Exception {
 
+
   /**
    * 
    */
@@ -37,6 +39,7 @@ public class CMISLoginException extends Exception {
    */
   public CMISLoginException(String message) {
     super(message);
+    // TODO Auto-generated constructor stub
   }
 
   /**
@@ -44,6 +47,7 @@ public class CMISLoginException extends Exception {
    */
   public CMISLoginException(Throwable cause) {
     super(cause);
+    // TODO Auto-generated constructor stub
   }
 
   /**
@@ -52,6 +56,7 @@ public class CMISLoginException extends Exception {
    */
   public CMISLoginException(String message, Throwable cause) {
     super(message, cause);
+    // TODO Auto-generated constructor stub
   }
 
 }

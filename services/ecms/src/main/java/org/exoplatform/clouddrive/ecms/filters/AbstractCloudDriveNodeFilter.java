@@ -98,13 +98,7 @@ public abstract class AbstractCloudDriveNodeFilter implements UIExtensionFilter 
 
   protected boolean acceptProvider(CloudProvider provider) {
     if (providers != null && providers.size() > 0) {
-      boolean accepted = providers.contains(provider.getId());
-      if (accepted) {
-        return true;
-      } else {
-        // TODO compare by class inheritance
-        return false;
-      }
+      return providers.contains(provider.getId());
     } else {
       return true;
     }

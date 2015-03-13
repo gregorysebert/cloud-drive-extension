@@ -16,6 +16,7 @@
  */
 package org.exoplatform.clouddrive;
 
+import org.exoplatform.clouddrive.jcr.JCRLocalCloudDrive;
 import org.exoplatform.clouddrive.jcr.NodeFinder;
 import org.exoplatform.clouddrive.utils.ExtendedMimeTypeResolver;
 import org.exoplatform.container.component.BaseComponentPlugin;
@@ -114,7 +115,7 @@ public abstract class CloudDriveConnector extends BaseComponentPlugin {
   public static final long                 PROVIDER_REQUEST_ATTEMPT_TIMEOUT = 10000;
 
   protected static final Log               LOG                              = ExoLogger.getLogger(CloudDriveConnector.class);
-  
+
   protected final Map<String, String>      config;
 
   protected final SessionProviderService   sessionProviders;
