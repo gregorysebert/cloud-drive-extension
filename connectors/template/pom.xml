@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-Copyright (C) 2014 eXo Platform SAS.
+Copyright (C) 2015 eXo Platform SAS.
 
 This is free software; you can redistribute it and/or modify it
 under the terms of the GNU Lesser General Public License as
@@ -25,7 +25,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <parent>
     <groupId>org.exoplatform.addons</groupId>
     <artifactId>exo-clouddrive-connectors</artifactId>
-    <version>1.1.0-SNAPSHOT</version>
+    <version>1.2.0-SNAPSHOT</version>
   </parent>
 
   <!-- Replace PROVIDER_ID with your provider ID -->  
@@ -33,8 +33,8 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <!-- Maintain your version below  -->
   <version>1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>eXo Cloud Drive Extension :: Connectors :: PROVIDER_ID</name>
-  <description>eXo Cloud Drive PROVIDER_ID connector</description>
+  <name>eXo Cloud Drive :: Connectors :: Template project</name>
+  <description>eXo Cloud Drive connector template project</description>
 
   <!-- Cloud API dependencies -->
   <dependencyManagement>
@@ -42,13 +42,13 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
       <dependency>
         <groupId>org.exoplatform.addons</groupId>
         <artifactId>exo-clouddrive-services-core</artifactId>
-        <version>1.1.0-RC1</version>
+        <version>1.1.0-RC4</version>
         <type>jar</type>
       </dependency>
       <dependency>
         <groupId>org.exoplatform.addons</groupId>
         <artifactId>exo-clouddrive-services-ecms</artifactId>
-        <version>1.1.0-RC1</version>
+        <version>1.1.0-RC4</version>
         <type>jar</type>
       </dependency>
       <!-- dependency>

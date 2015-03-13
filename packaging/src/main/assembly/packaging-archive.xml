@@ -53,6 +53,7 @@
        <scope>provided</scope>
        <fileMode>0644</fileMode>
      </dependencySet>
+<<<<<<< HEAD
      <!--<dependencySet>
        <outputDirectory>webapps</outputDirectory>
        <includes>
@@ -62,6 +63,8 @@
        <scope>provided</scope>
        <fileMode>0644</fileMode>
      </dependencySet>-->
+=======
+>>>>>>> FETCH_HEAD
      <dependencySet>
        <!-- Dependencies for deployment to Platform 4.0 instance -->
        <outputDirectory>lib</outputDirectory>

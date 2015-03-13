@@ -19,9 +19,11 @@
 package org.exoplatform.clouddrive.jcr;
 
 import org.exoplatform.clouddrive.CloudDriveException;
+import org.exoplatform.clouddrive.CloudFile;
 import org.exoplatform.clouddrive.CloudFileAPI;
 import org.exoplatform.clouddrive.CloudFileSynchronizer;
 import org.exoplatform.clouddrive.SkipSyncException;
+import org.exoplatform.clouddrive.SyncNotSupportedException;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 
@@ -78,7 +80,7 @@ public class NtFileSynchronizer implements CloudFileSynchronizer {
   /**
    * {@inheritDoc}
    */
-  public boolean create(Node file, CloudFileAPI api) throws RepositoryException, CloudDriveException {
+  public CloudFile create(Node file, CloudFileAPI api) throws RepositoryException, CloudDriveException {
     String title;
     try {
       title = api.getTitle(file);
@@ -90,22 +92,18 @@ public class NtFileSynchronizer implements CloudFileSynchronizer {
       }
     }
 
+    CloudFile result;
     Calendar created = file.getProperty("jcr:created").getDate();
 
     if (file.isNodeType(JCRLocalCloudDrive.NT_FILE)) { // use JCR, this node not yet a cloud file
       Node resource = file.getNode("jcr:content");
       String mimeType = resource.getProperty("jcr:mimeType").getString();
       Calendar modified = resource.getProperty("jcr:lastModified").getDate();
-      // if (file.isNodeType(JCRLocalCloudDrive.EXO_DATETIME)) {
-      // created = file.getProperty("exo:dateCreated").getDate();
-      // modified = file.getProperty("exo:dateModified").getDate();
-      // }
       InputStream data = resource.getProperty("jcr:data").getStream();
 
       try {
-        api.createFile(file, created, modified, mimeType, data);
+        result = api.createFile(file, created, modified, mimeType, data);
         resource.setProperty("jcr:data", JCRLocalCloudDrive.DUMMY_DATA); // empty data to zero string
-        return true;
       } finally {
         try {
           data.close();
@@ -114,19 +112,18 @@ public class NtFileSynchronizer implements CloudFileSynchronizer {
         }
       }
     } else if (file.isNodeType(JCRLocalCloudDrive.NT_FOLDER)) {
-      api.createFolder(file, created);
+      result = api.createFolder(file, created);
       // traverse and create child files
-      boolean result = true;
       for (NodeIterator childs = file.getNodes(); childs.hasNext();) {
-        result &= create(childs.nextNode(), api);
+        create(childs.nextNode(), api);
       }
-      return result;
     } else {
       // it's smth not expected
-      LOG.warn("Unexpected type of created node in nt:file or nt:folder hierarchy: "
+      throw new SyncNotSupportedException("Unexpected type of created node in nt:file or nt:folder hierarchy: "
           + file.getPrimaryNodeType().getName() + ". Location: " + file.getPath());
-      return false;
     }
+
+    return result;
   }
 
   /**
@@ -136,11 +133,10 @@ public class NtFileSynchronizer implements CloudFileSynchronizer {
   public boolean remove(String filePath, String fileId, boolean isFolder, CloudFileAPI api) throws CloudDriveException,
                                                                                            RepositoryException {
     if (isFolder) {
-      api.removeFolder(fileId);
+      return api.removeFolder(fileId);
     } else {
-      api.removeFile(fileId);
+      return api.removeFile(fileId);
     }
-    return true;
   }
 
   /**
@@ -158,7 +154,7 @@ public class NtFileSynchronizer implements CloudFileSynchronizer {
   /**
    * {@inheritDoc}
    */
-  public boolean untrash(Node file, CloudFileAPI api) throws RepositoryException, CloudDriveException {
+  public CloudFile untrash(Node file, CloudFileAPI api) throws RepositoryException, CloudDriveException {
     if (api.isFolder(file)) {
       return api.untrashFolder(file);
     } else {
@@ -170,7 +166,7 @@ public class NtFileSynchronizer implements CloudFileSynchronizer {
    * {@inheritDoc}
    */
   @Override
-  public boolean update(Node file, CloudFileAPI api) throws CloudDriveException, RepositoryException {
+  public CloudFile update(Node file, CloudFileAPI api) throws CloudDriveException, RepositoryException {
     if (api.isFolder(file)) { // use API to get a type of given node, it is already a cloud file
       Calendar modified;
       if (file.isNodeType(JCRLocalCloudDrive.EXO_DATETIME)) {
@@ -178,21 +174,16 @@ public class NtFileSynchronizer implements CloudFileSynchronizer {
       } else {
         modified = Calendar.getInstance(); // will be "now"
       }
-
-      api.updateFolder(file, modified);
       // we don't traverse and update childs!
-      return true;
+      return api.updateFolder(file, modified);
     } else if (api.isFile(file)) {
       Node resource = file.getNode("jcr:content");
       Calendar modified = resource.getProperty("jcr:lastModified").getDate();
-
-      api.updateFile(file, modified);
-      return true;
+      return api.updateFile(file, modified);
     } else {
       // it's smth not expected
-      LOG.warn("Unexpected type of updated node in nt:file or nt:folder hierarchy: "
+      throw new SyncNotSupportedException("Unexpected type of updated node in nt:file or nt:folder hierarchy: "
           + file.getPrimaryNodeType().getName() + ". Location: " + file.getPath());
-      return false;
     }
   }
 
@@ -200,7 +191,7 @@ public class NtFileSynchronizer implements CloudFileSynchronizer {
    * {@inheritDoc}
    */
   @Override
-  public boolean updateContent(Node file, CloudFileAPI api) throws CloudDriveException, RepositoryException {
+  public CloudFile updateContent(Node file, CloudFileAPI api) throws CloudDriveException, RepositoryException {
     String title = api.getTitle(file);
 
     if (api.isFile(file)) { // use API, in accept() we already selected nt:file
@@ -210,8 +201,7 @@ public class NtFileSynchronizer implements CloudFileSynchronizer {
       InputStream data = resource.getProperty("jcr:data").getStream();
 
       try {
-        api.updateFileContent(file, modified, mimeType, data);
-        return true;
+        return api.updateFileContent(file, modified, mimeType, data);
       } finally {
         try {
           data.close();
@@ -221,9 +211,8 @@ public class NtFileSynchronizer implements CloudFileSynchronizer {
       }
     } else {
       // it's smth not expected
-      LOG.warn("Unexpected type of updated node (content) in nt:file or nt:folder hierarchy: "
+      throw new SyncNotSupportedException("Unexpected type of updated node (content) in nt:file or nt:folder hierarchy: "
           + file.getPrimaryNodeType().getName() + ". Location: " + file.getPath());
-      return false;
     }
   }
 
@@ -231,19 +220,16 @@ public class NtFileSynchronizer implements CloudFileSynchronizer {
    * {@inheritDoc}
    */
   @Override
-  public boolean copy(Node srcFile, Node destFile, CloudFileAPI api) throws CloudDriveException,
-                                                                    RepositoryException {
+  public CloudFile copy(Node srcFile, Node destFile, CloudFileAPI api) throws CloudDriveException,
+                                                                      RepositoryException {
     if (api.isFolder(destFile)) {
-      api.copyFolder(srcFile, destFile);
-      return true;
+      return api.copyFolder(srcFile, destFile);
     } else if (api.isFile(destFile)) {
-      api.copyFile(srcFile, destFile);
-      return true;
+      return api.copyFile(srcFile, destFile);
     } else {
       // it's smth not expected
-      LOG.warn("Unexpected type of copied node in nt:file or nt:folder hierarchy: "
+      throw new SyncNotSupportedException("Unexpected type of copied node in nt:file or nt:folder hierarchy: "
           + destFile.getPrimaryNodeType().getName() + ". Location: " + destFile.getPath());
-      return false;
     }
   }
 }

@@ -39,9 +39,9 @@ public class LinkedCloudFile implements CloudFile {
 
   private final String             link;
 
-  private final String             previewLink;
-
   private final String             editLink;
+
+  private final String             previewLink;
 
   private final String             thumbnailLink;
 
@@ -50,6 +50,8 @@ public class LinkedCloudFile implements CloudFile {
   private final String             lastUser;
 
   private final String             author;
+
+  private final long               size;
 
   private final transient Calendar createdDate;
 
@@ -69,8 +71,8 @@ public class LinkedCloudFile implements CloudFile {
     this.id = file.getId();
     this.title = file.getTitle();
     this.link = file.getLink();
-    this.previewLink = file.getPreviewLink();
     this.editLink = file.getEditLink();
+    this.previewLink = file.getPreviewLink();
     this.thumbnailLink = file.getThumbnailLink();
     this.type = file.getType();
     this.typeMode = file.getTypeMode();
@@ -80,33 +82,34 @@ public class LinkedCloudFile implements CloudFile {
     this.createdDate = file.getCreatedDate();
     this.modifiedDate = file.getModifiedDate();
     this.path = path;
+    this.size = file.getSize();
     this.isSymlink = true;
     this.acl = file.getACL();
   }
 
   /**
-   * @return the isSymlink
+   * {@inheritDoc}
    */
   public boolean isSymlink() {
     return isSymlink;
   }
 
   /**
-   * @return the id
+   * {@inheritDoc}
    */
   public String getId() {
     return id;
   }
 
   /**
-   * @return the title
+   * {@inheritDoc}
    */
   public String getTitle() {
     return title;
   }
 
   /**
-   * @return the link
+   * {@inheritDoc}
    */
   public String getLink() {
     return link;
@@ -115,27 +118,26 @@ public class LinkedCloudFile implements CloudFile {
   /**
    * {@inheritDoc}
    */
-  @Override
   public String getEditLink() {
     return editLink;
   }
 
   /**
-   * @return the previewLink
+   * {@inheritDoc}
    */
   public String getPreviewLink() {
     return previewLink;
   }
 
   /**
-   * @return the thumbnailLink
+   * {@inheritDoc}
    */
   public String getThumbnailLink() {
     return thumbnailLink;
   }
 
   /**
-   * @return the type
+   * {@inheritDoc}
    */
   public String getType() {
     return type;
@@ -144,54 +146,64 @@ public class LinkedCloudFile implements CloudFile {
   /**
    * {@inheritDoc}
    */
-  @Override
   public String getTypeMode() {
     return typeMode;
   }
 
   /**
-   * @return the lastUser
+   * {@inheritDoc}
    */
   public String getLastUser() {
     return lastUser;
   }
 
   /**
-   * @return the author
+   * {@inheritDoc}
    */
   public String getAuthor() {
     return author;
   }
 
   /**
-   * @return the createdDate
+   * {@inheritDoc}
    */
   public Calendar getCreatedDate() {
     return createdDate;
   }
 
   /**
-   * @return the modifiedDate
+   * {@inheritDoc}
    */
   public Calendar getModifiedDate() {
     return modifiedDate;
   }
 
   /**
-   * @return the isFolder
+   * {@inheritDoc}
    */
   public boolean isFolder() {
     return folder;
   }
 
   /**
-   * @return the path
+   * {@inheritDoc}
    */
   public String getPath() {
     return path;
   }
 
+<<<<<<< HEAD
   public AccessControlList getACL() {
         return null;
   }
+=======
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public long getSize() {
+    return size;
+  }
+
+>>>>>>> FETCH_HEAD
 }
