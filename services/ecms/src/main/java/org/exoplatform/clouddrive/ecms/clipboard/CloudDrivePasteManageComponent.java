@@ -20,22 +20,20 @@ package org.exoplatform.clouddrive.ecms.clipboard;
 
 import org.exoplatform.clouddrive.ecms.symlink.CloudFileSymlink;
 import org.exoplatform.clouddrive.ecms.symlink.CloudFileSymlinkException;
-import org.exoplatform.ecm.jcr.model.ClipboardCommand;
 import org.exoplatform.ecm.webui.component.explorer.UIJCRExplorer;
-import org.exoplatform.ecm.webui.component.explorer.UIWorkingArea;
 import org.exoplatform.ecm.webui.component.explorer.rightclick.manager.PasteManageComponent;
+import org.exoplatform.services.cms.clipboard.ClipboardService;
+import org.exoplatform.services.cms.clipboard.jcr.model.ClipboardCommand;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
+import org.exoplatform.services.security.ConversationState;
+import org.exoplatform.services.wcm.utils.WCMCoreUtils;
 import org.exoplatform.webui.config.annotation.ComponentConfig;
 import org.exoplatform.webui.config.annotation.EventConfig;
 import org.exoplatform.webui.core.UIApplication;
 import org.exoplatform.webui.event.Event;
 
-import java.util.Iterator;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Support of Cloud Drive files pasting from ECMS Clipboard. If not a cloud file then original behaviour of
@@ -44,129 +42,131 @@ import java.util.Set;
  * Code parts of this class based on original {@link PasteManageComponent} (state of ECMS
  * 4.0.4).<br>
  * Created by The eXo Platform SAS.
- * 
+ *
  * @author <a href="mailto:pnedonosko@exoplatform.com">Peter Nedonosko</a>
  * @version $Id: CloudDrivePasteManageComponent.java 00000 May 12, 2014 pnedonosko $
- * 
+ *
  */
 @ComponentConfig(
-                 events = { @EventConfig(listeners = CloudDrivePasteManageComponent.PasteActionListener.class) })
+        events = { @EventConfig(listeners = CloudDrivePasteManageComponent.PasteActionListener.class) })
 public class CloudDrivePasteManageComponent extends PasteManageComponent {
 
-  protected static final Log LOG = ExoLogger.getLogger(CloudDrivePasteManageComponent.class);
+    protected static final Log LOG = ExoLogger.getLogger(CloudDrivePasteManageComponent.class);
 
-  public static class PasteActionListener extends PasteManageComponent.PasteActionListener {
-    public void processEvent(Event<PasteManageComponent> event) throws Exception {
-      UIJCRExplorer uiExplorer = event.getSource().getAncestorOfType(UIJCRExplorer.class);
+    public static class PasteActionListener extends PasteManageComponent.PasteActionListener {
+        public void processEvent(Event<PasteManageComponent> event) throws Exception {
+            UIJCRExplorer uiExplorer = event.getSource().getAncestorOfType(UIJCRExplorer.class);
 
-      CloudFileSymlink symlinks = new CloudFileSymlink(uiExplorer);
-      try {
-        String destParam = event.getRequestContext().getRequestParameter(OBJECTID);
-        if (destParam == null) {
-          symlinks.setDestination(uiExplorer.getCurrentNode());
-        } else {
-          symlinks.setDestination(destParam);
-        }
-
-        LinkedList<ClipboardCommand> allClipboards = uiExplorer.getAllClipBoard();
-        if (allClipboards.size() > 0) {
-          UIWorkingArea uiWorkingArea = event.getSource().getParent();
-          List<ClipboardCommand> virtClipboards = uiWorkingArea.getVirtualClipboards();
-          ClipboardCommand current = null; // will refer to last attempted to link
-          if (virtClipboards.isEmpty()) { // single file
-            current = allClipboards.getLast();
-            boolean isCut = ClipboardCommand.CUT.equals(current.getType());
-            symlinks.addSource(current.getWorkspace(), current.getSrcPath());
-            if (isCut) {
-              symlinks.move();
-            }
-            if (symlinks.create()) {
-              symlinks.getDestinationNode().getSession().save();
-              // file was successfully linked
-              if (isCut) {
-                // TODO should not happen until we will support cut-paste between drives
-                virtClipboards.clear();
-                allClipboards.remove(current);
-              }
-              // complete the event here
-              uiExplorer.updateAjax(event);
-              return;
-            }
-          } else { // multiple files
-            final int virtSize = virtClipboards.size();
-            Set<ClipboardCommand> linked = new LinkedHashSet<ClipboardCommand>();
-            Boolean isCut = null;
-            for (Iterator<ClipboardCommand> iter = virtClipboards.iterator(); iter.hasNext();) {
-              current = iter.next();
-              boolean isThisCut = ClipboardCommand.CUT.equals(current.getType());
-              if (isCut == null) {
-                isCut = isThisCut;
-              }
-              if (isCut.equals(isThisCut)) {
-                symlinks.addSource(current.getWorkspace(), current.getSrcPath());
-                linked.add(current);
-              } else {
-                // we have unexpected state when items in group clipboard have different types of operation
-                LOG.warn("Cannot handle different types of clipboard operations for group action. Files "
-                    + (isCut ? " cut-paste" : " copy-paste") + " already started but "
-                    + (isThisCut ? " cut-paste" : " copy-paste") + " found for " + current.getSrcPath());
-                // let default logic deal with this
-                break;
-              }
-            }
-
-            if (virtSize == linked.size()) {
-              if (isCut != null && isCut) {
-                symlinks.move();
-              }
-              if (symlinks.create()) {
-                symlinks.getDestinationNode().getSession().save();
-                // files was successfully linked
-                if (isCut) {
-                  // TODO should not happen until we will support cut-paste between drives
-                  virtClipboards.clear();
-                  for (ClipboardCommand c : linked) {
-                    allClipboards.remove(c);
-                  }
+            CloudFileSymlink symlinks = new CloudFileSymlink(uiExplorer);
+            try {
+                String destParam = event.getRequestContext().getRequestParameter(OBJECTID);
+                if (destParam == null) {
+                    symlinks.setDestination(uiExplorer.getCurrentNode());
+                } else {
+                    symlinks.setDestination(destParam);
                 }
+
+                String userId = ConversationState.getCurrent().getIdentity().getUserId();
+                ClipboardService clipboardService = WCMCoreUtils.getService(ClipboardService.class);
+                Deque<ClipboardCommand> allClipboards = new LinkedList<ClipboardCommand>(clipboardService.getClipboardList(userId,
+                        false));
+                if (allClipboards.size() > 0) {
+                    Set<ClipboardCommand> virtClipboards = clipboardService.getClipboardList(userId, true);
+                    ClipboardCommand current = null; // will refer to last attempted to link
+                    if (virtClipboards.isEmpty()) { // single file
+                        current = allClipboards.getLast();
+                        boolean isCut = ClipboardCommand.CUT.equals(current.getType());
+                        symlinks.addSource(current.getWorkspace(), current.getSrcPath());
+                        if (isCut) {
+                            symlinks.move();
+                        }
+                        if (symlinks.create()) {
+                            symlinks.getDestinationNode().getSession().save();
+                            // file was successfully linked
+                            if (isCut) {
+                                // TODO should not happen until we will support cut-paste between drives
+                                virtClipboards.clear();
+                                allClipboards.remove(current);
+                            }
+                            // complete the event here
+                            uiExplorer.updateAjax(event);
+                            return;
+                        }
+                    } else { // multiple files
+                        final int virtSize = virtClipboards.size();
+                        Set<ClipboardCommand> linked = new LinkedHashSet<ClipboardCommand>();
+                        Boolean isCut = null;
+                        for (Iterator<ClipboardCommand> iter = virtClipboards.iterator(); iter.hasNext();) {
+                            current = iter.next();
+                            boolean isThisCut = ClipboardCommand.CUT.equals(current.getType());
+                            if (isCut == null) {
+                                isCut = isThisCut;
+                            }
+                            if (isCut.equals(isThisCut)) {
+                                symlinks.addSource(current.getWorkspace(), current.getSrcPath());
+                                linked.add(current);
+                            } else {
+                                // we have unexpected state when items in group clipboard have different types of operation
+                                LOG.warn("Cannot handle different types of clipboard operations for group action. Files "
+                                        + (isCut ? " cut-paste" : " copy-paste") + " already started but "
+                                        + (isThisCut ? " cut-paste" : " copy-paste") + " found for " + current.getSrcPath());
+                                // let default logic deal with this
+                                break;
+                            }
+                        }
+
+                        if (virtSize == linked.size()) {
+                            if (isCut != null && isCut) {
+                                symlinks.move();
+                            }
+                            if (symlinks.create()) {
+                                symlinks.getDestinationNode().getSession().save();
+                                // files was successfully linked
+                                if (isCut) {
+                                    // TODO should not happen until we will support cut-paste between drives
+                                    virtClipboards.clear();
+                                    for (ClipboardCommand c : linked) {
+                                        allClipboards.remove(c);
+                                    }
+                                }
+                                // complete the event here
+                                uiExplorer.updateAjax(event);
+                                return;
+                            }
+                        } else {
+                            // something goes wrong and we will let default code to work
+                            symlinks.getDestinationNode().getSession().refresh(false);
+                            LOG.warn("Links cannot be created for all cloud files. Destination "
+                                    + symlinks.getDestonationPath() + "."
+                                    + (current != null ? " Last file " + current.getSrcPath() + "." : "")
+                                    + " Default behaviour will be applied (files Paste).");
+                        }
+                    }
+                }
+            } catch (CloudFileSymlinkException e) {
+                // this exception is a part of logic and it interrupts the operation
+                LOG.warn(e.getMessage());
+                UIApplication uiApp = uiExplorer.getAncestorOfType(UIApplication.class);
+                uiApp.addMessage(e.getUIMessage());
+                symlinks.getDestinationNode().getSession().refresh(false);
                 // complete the event here
                 uiExplorer.updateAjax(event);
                 return;
-              }
-            } else {
-              // something goes wrong and we will let default code to work
-              symlinks.getDestinationNode().getSession().refresh(false);
-              LOG.warn("Links cannot be created for all cloud files. Destination "
-                  + symlinks.getDestonationPath() + "."
-                  + (current != null ? " Last file " + current.getSrcPath() + "." : "")
-                  + " Default behaviour will be applied (files Paste).");
+            } catch (Exception e) {
+                // ignore and return false
+                LOG.warn("Error creating link of cloud file. Default behaviour will be applied (file Paste).", e);
             }
-          }
+
+            // else... call PasteManageComponent in all other cases
+            super.processEvent(event);
         }
-      } catch (CloudFileSymlinkException e) {
-        // this exception is a part of logic and it interrupts the operation
-        LOG.warn(e.getMessage());
-        UIApplication uiApp = uiExplorer.getAncestorOfType(UIApplication.class);
-        uiApp.addMessage(e.getUIMessage());
-        symlinks.getDestinationNode().getSession().refresh(false);
-        // complete the event here
-        uiExplorer.updateAjax(event);
-        return;
-      } catch (Exception e) {
-        // ignore and return false
-        LOG.warn("Error creating link of cloud file. Default behaviour will be applied (file Paste).", e);
-      }
-
-      // else... call PasteManageComponent in all other cases
-      super.processEvent(event);
     }
-  }
 
-  /**
-   * 
-   */
-  public CloudDrivePasteManageComponent() {
-    super();
-  }
+    /**
+     *
+     */
+    public CloudDrivePasteManageComponent() {
+        super();
+    }
 
 }
