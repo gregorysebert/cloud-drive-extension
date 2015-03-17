@@ -27,7 +27,7 @@
     <version>5</version>
   </parent>
   <artifactId>exo-clouddrive-parent</artifactId>
-  <version>1.1.0-SNAPSHOT</version>
+  <version>1.2.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>eXo Cloud Drive :: Parent</name>
   <description>eXo Cloud Drive extension project reactor</description>
@@ -60,7 +60,7 @@
     <org.apache.chemistry.opencmis.version>0.12.0</org.apache.chemistry.opencmis.version>
 
     <!-- for tests -->
-    <org.exoplatform.jcr-services.version>1.15.10-GA</org.exoplatform.jcr-services.version>
+    <org.exoplatform.jcr-services.version>1.15.11-GA</org.exoplatform.jcr-services.version>
     <test.groovy.version>2.0.8</test.groovy.version>
     <!-- spock.version>1.0-groovy-2.0-SNAPSHOT</spock.version -->
     <spock.version>0.7-groovy-2.0</spock.version>
