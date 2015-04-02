@@ -50,3 +50,11 @@ transaction.log
 connectors/cmis/src/main/resources/rebel-remote.xml
 
 connectors/cmis/src/main/resources/rebel.xml
+
+connectors/cmis/webapp/src/main/resources/rebel-remote.xml
+
+connectors/cmis/webapp/src/main/resources/rebel.xml
+
+rest-synchronisation-services/src/main/resources/rebel-remote.xml
+
+rest-synchronisation-services/src/main/resources/rebel.xml
