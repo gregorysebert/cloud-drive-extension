@@ -56,7 +56,7 @@ public class ClouddriveRestSyncService implements ResourceContainer {
     protected static final String DRIVE_PERMISSIONS = "exo.clouddrive.alfresco.drive.permissions";
     protected static final String DRIVE_VIEWS = "exo.clouddrive.alfresco.drive.views";
     protected static final String DRIVE_ICON = "exo.clouddrive.alfresco.drive.icon";
-    protected static final String DRIVE_PATH = "exo.clouddrive.alfresco.drive.path";
+    protected static final String DRIVE_PATH = "exo.clouddrive.alfresco.drive.homePath";
     protected static final String DRIVE_VIEW_REFERENCES = "exo.clouddrive.alfresco.drive.viewPreferences";
     protected static final String DRIVE_VIEW_NON_DOCUMENT = "exo.clouddrive.alfresco.drive.viewNonDocument";
     protected static final String DRIVE_VIEW_SIDEBAR = "exo.clouddrive.alfresco.drive.viewSideBar";
@@ -79,16 +79,16 @@ public class ClouddriveRestSyncService implements ResourceContainer {
 
   @GET
 
-  @Path("/syncAll/{init}")
+  @Path("/init")
 
   @RolesAllowed({"administrators"}) 
 
-  public String syncAll(@PathParam("init") String init)
+  public String init()
   {
 
       // 1. Authentication in Alfresco
       try {
-          log.info("Call syncAll");
+          log.info("Call init");
           log.info("Get init param from exo.properties : user=" + PropertyManager.getProperty(SYNC_USER) + ", url=" + PropertyManager.getProperty(SYNC_URL));
           log.info("Connecting to alfresco using cmis");
           CodeAuthentication codeAuth = (CodeAuthentication) ExoContainerContext.getCurrentContainer().getComponentInstance(CodeAuthentication.class);
@@ -129,24 +129,8 @@ public class ClouddriveRestSyncService implements ResourceContainer {
               alfrescoFolder = root.addNode("Alfresco", "nt:unstructured");
               session.save();
           }
-          else
-          {
-              if (Boolean.valueOf(init))
-              {
-                  log.info("Init set to true -- Recreating Alfresco jcr node");
-                  alfrescoFolder = root.getNode("Alfresco");
-                  alfrescoFolder.remove();
-                  removeDrive(getDmsRepositorySession());
-                  alfrescoFolder = root.addNode("Alfresco", "nt:unstructured");
-                  session.save();
-                  this.addDrive(getDmsRepositorySession());
-              }
-              else {
 
-                  log.info("Alfresco jcr node already exist");
-                  alfrescoFolder =  root.getNode("Alfresco");
-              }
-          }
+          addDrive();
 
           CloudDrive cmisRepoDrive = cloudDrives.findDrive(alfrescoFolder);
 
@@ -159,25 +143,96 @@ public class ClouddriveRestSyncService implements ResourceContainer {
 
            // Synchronization
           log.info("Connecting to cmis");
-          CloudDrive.Command commandConnect = cmisRepoDrive.connect();
+          cmisRepoDrive.connect().await();
 
           log.info("Sync drive");
-          CloudDrive.Command commandSync = cmisRepoDrive.synchronize();
+          cmisRepoDrive.synchronize().await();
 
       } catch (Exception e) {
           log.error("Login in Alfresco error");
           e.printStackTrace();
       }
-
-
-
-
       return "SyncAll ok";
-
   }
 
+    @GET
 
-  @GET
+    @Path("/syncAll")
+
+    @RolesAllowed({"administrators"})
+
+    public String syncAll()
+    {
+
+        // 1. Authentication in Alfresco
+        try {
+            log.info("Call syncAll");
+            log.info("Get init param from exo.properties : user=" + PropertyManager.getProperty(SYNC_USER) + ", url=" + PropertyManager.getProperty(SYNC_URL));
+            log.info("Connecting to alfresco using cmis");
+            CodeAuthentication codeAuth = (CodeAuthentication) ExoContainerContext.getCurrentContainer().getComponentInstance(CodeAuthentication.class);
+            String code = codeAuth.authenticate(PropertyManager.getProperty(SYNC_URL),PropertyManager.getProperty(SYNC_USER), PropertyManager.getProperty(SYNC_PASSWORD));
+
+            CloudDriveService cloudDrives = (CloudDriveService) ExoContainerContext.getCurrentContainer().getComponentInstance(CloudDriveService.class);
+            CloudProvider cmisProvider = cloudDrives.getProvider("cmis");
+            CMISUser cmisUser = (CMISUser) cloudDrives.authenticate(cmisProvider, code);
+
+            // We get the Alfresco Repo
+            List<Repository> repoList = cmisUser.getRepositories();
+            org.apache.chemistry.opencmis.client.api.Repository repoAlfresco = repoList.get(0);
+
+            cmisUser.setRepositoryId(repoAlfresco.getId());
+
+            // We set CMIS Repo
+            codeAuth.setCodeContext(code, repoAlfresco.getId());
+            RepositoryService repositoryService = (RepositoryService) ExoContainerContext.getCurrentContainer().getComponentInstanceOfType(RepositoryService.class);
+            repositoryService.setCurrentRepositoryName(System.getProperty("gatein.jcr.repository.default"));
+
+            SessionProviderService sessionProviders = (SessionProviderService) ExoContainerContext.getCurrentContainer().getComponentInstanceOfType(SessionProviderService.class);
+            SessionProvider sessionProvider = new SessionProvider(ConversationState.getCurrent());
+            sessionProvider.setCurrentRepository(repositoryService.getCurrentRepository());
+            sessionProvider.setCurrentWorkspace("collaboration");
+            sessionProviders.setSessionProvider(null, sessionProvider);
+            Session session = sessionProviders.getSessionProvider(null).getSession(sessionProvider.getCurrentWorkspace(), sessionProvider.getCurrentRepository());
+
+
+            // 3. We get the node
+            ManageableRepository manageableRepository = repositoryService.getCurrentRepository();
+            session = sessionProvider.getSession("collaboration", manageableRepository);
+
+            Node alfrescoFolder = null;
+            Node root = session.getRootNode();
+
+            if (root.hasNode("Alfresco")) {
+                alfrescoFolder = root.getNode("Alfresco");
+            }
+
+            CloudDrive cmisRepoDrive = cloudDrives.findDrive(alfrescoFolder);
+
+            if (cmisRepoDrive == null) {
+                // Let's create the Drive
+                log.info("Could connect to cloud drive, please run init first ...");
+                cmisRepoDrive = cloudDrives.createDrive(cmisUser, alfrescoFolder);
+            }
+            else
+            {
+                // Synchronization
+                log.info("Connecting to cmis");
+                cmisRepoDrive.connect().await();
+
+                log.info("Sync drive");
+                cmisRepoDrive.synchronize().await();
+            }
+
+        } catch (Exception e) {
+            log.error("Login in Alfresco error");
+            e.printStackTrace();
+        }
+        return "SyncAll ok";
+    }
+
+
+
+      @GET
 
   @Path("/syncItem/{cmisId}")
   @RolesAllowed({"administrators"})
@@ -193,14 +248,14 @@ public class ClouddriveRestSyncService implements ResourceContainer {
 
     /**
      * Register new drive node with specified DriveData
-     * @param session
      * @throws Exception
      */
-    private void addDrive(Session session) throws Exception {
+    private void addDrive() throws Exception {
         nodeHierarchyCreator_ = (NodeHierarchyCreator) ExoContainerContext.getCurrentContainer()
                 .getComponentInstanceOfType(NodeHierarchyCreator.class);
+        Session sessionDrive =  getDmsRepositorySession();
         String drivesPath = nodeHierarchyCreator_.getJcrPath(BasePath.EXO_DRIVES_PATH);
-        Node driveHome = (Node)session.getItem(drivesPath) ;
+        Node driveHome = (Node)sessionDrive.getItem(drivesPath) ;
         Node driveNode = null ;
         if(!driveHome.hasNode(PropertyManager.getProperty(DRIVE_NAME))){
             driveNode = driveHome.addNode(PropertyManager.getProperty(DRIVE_NAME), "exo:drive");
@@ -215,24 +270,7 @@ public class ClouddriveRestSyncService implements ResourceContainer {
             driveNode.setProperty(JCR_SHOW_HIDDEN_NODE, PropertyManager.getProperty(DRIVE_SHOW_HIDDEN_NODE)) ;
             driveNode.setProperty(JCR_ALLOW_CREATE_FOLDER, PropertyManager.getProperty(DRIVE_ALLOW_CREATE_FOLDER)) ;
             driveHome.save() ;
-            session.save() ;
-        }
-    }
-
-    /**
-     * Register new drive node with specified DriveData
-     * @param session
-     * @throws Exception
-     */
-    private void removeDrive(Session session) throws Exception {
-        nodeHierarchyCreator_ = (NodeHierarchyCreator) ExoContainerContext.getCurrentContainer()
-                .getComponentInstanceOfType(NodeHierarchyCreator.class);
-        String drivesPath = nodeHierarchyCreator_.getJcrPath(BasePath.EXO_DRIVES_PATH);
-        Node driveHome = (Node)session.getItem(drivesPath) ;
-        Node driveNode = null ;
-        if(driveHome.hasNode(PropertyManager.getProperty(DRIVE_NAME))){
-            driveHome.getNode(PropertyManager.getProperty(DRIVE_NAME)).remove();
-            session.save() ;
+            sessionDrive.save() ;
         }
     }
 
@@ -250,4 +288,5 @@ public class ClouddriveRestSyncService implements ResourceContainer {
         DMSRepositoryConfiguration dmsRepoConfig = dmsConfiguration.getConfig();
         return manaRepository.getSystemSession(dmsRepoConfig.getSystemWorkspace());
     }
-}
+
+    }

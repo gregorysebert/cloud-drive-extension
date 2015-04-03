@@ -711,7 +711,7 @@ public class CMISAPI {
    * @return {@link CmisObject}
    */
   protected CmisObject readObject(String id, Session session, OperationContext context) {
-    return session.getObject(id, context);
+      return session.getObject(id, context);
   }
 
   /**
@@ -1869,9 +1869,21 @@ public class CMISAPI {
 
 
     public AccessControlList getACL(CmisObject cmisObject) {
+        Session sessionCmis = null;
+        try {
+            sessionCmis = session();
+        } catch (CMISException e) {
+            e.printStackTrace();
+        } catch (RefreshAccessException e) {
+            e.printStackTrace();
+        }
+        /**** Quick fix permission lucas***/
+        OperationContext oc = sessionCmis.createOperationContext();
+        oc.setIncludeAcls(true);
+        CmisObject cmisObjectNew = sessionCmis.getObject(cmisObject.getId(), oc);
         List<AccessControlEntry> listEntry=new ArrayList<AccessControlEntry>();
-        if (cmisObject.getAcl()!=null) {
-            for (Ace entry : cmisObject.getAcl().getAces()) {
+        if (cmisObjectNew.getAcl()!=null) {
+            for (Ace entry : cmisObjectNew.getAcl().getAces()) {
                 for (String permission : convertToJCRPerm(entry.getPermissions())) {
                     listEntry.add(new AccessControlEntry(mapToPlatformGroup(entry.getPrincipalId()), permission));
                 }
