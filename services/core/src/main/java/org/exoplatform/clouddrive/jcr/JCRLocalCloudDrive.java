@@ -4235,9 +4235,6 @@ public abstract class JCRLocalCloudDrive extends CloudDrive implements CloudDriv
       }
 
       if (acl != null) {
-          if (localNode.canAddMixin("exo:privilegeable")) {
-              localNode.addMixin("exo:privilegeable");
-          }
               Map<String, String[]> perMap = new HashMap<String, String[]>();
               List<String> permsList;
               List<String> idList = new ArrayList<String>();
@@ -4248,7 +4245,17 @@ public abstract class JCRLocalCloudDrive extends CloudDrive implements CloudDriv
                       perMap.put(accessEntry.getIdentity(), permsList.toArray(new String[permsList.size()]));
                   }
               }
+
+          if (localNode.canAddMixin("exo:privilegeable") && perMap.size()>0) {
+              localNode.addMixin("exo:privilegeable");
               ((NodeImpl) localNode).setPermissions(perMap);
+          }
+          else
+          {
+              LOG.warn("Unable to set jcr permission on :" + localNode.getPath() + "/" + localNode.getName());
+
+          }
+
       }
       //Set default permissions from parent Node
       else

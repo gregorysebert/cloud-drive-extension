@@ -1898,7 +1898,11 @@ public class CMISAPI {
         {
             return "any";
         }
-        return principal;
+        if (principal.equals("admin"))
+        {
+             return "root";
+        }
+        else return principal;
     }
 
     //MAP eXo group to cmis group
